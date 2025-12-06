@@ -1,11 +1,11 @@
 # dir
 __pycache__/
 .vscode/
-checkpoints/
-datasets/
+#checkpoints/
+#datasets/
 todo.md
-gpu_task.py
-cmd.sh
+#gpu_task.py
+#cmd.sh
 
 # file
 *.npz
