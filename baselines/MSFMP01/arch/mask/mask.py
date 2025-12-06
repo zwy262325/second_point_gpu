@@ -84,7 +84,7 @@ class Mask(nn.Module):
 
         # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
         agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        patches = self.positional_encoding(mid_patches)  # BNTD(8,207,72,96)
+        patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
 
         # 1.生成多个掩蔽副本/掩蔽矩阵 并与原始序列拼接 batch_x_om_3d(6624,72,96) B * (positive_num + 1)DT, mask_om_3d(6624,72,96)
         x_enc, mask_index = self.masked_data(patches, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
