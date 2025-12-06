@@ -43,7 +43,7 @@ class MSFMP(nn.Module):
 
         # load parameters
         # 在模型训练过程中保存的模型状态
-        checkpoint_dict = torch.load(self.pre_trained_tmae_path, map_location='cpu')
+        checkpoint_dict = torch.load(self.pre_trained_tmae_path, map_location='cuda:0')
         self.tmae.load_state_dict(checkpoint_dict["model_state_dict"])
 
         # 3. 删除smae加载代码

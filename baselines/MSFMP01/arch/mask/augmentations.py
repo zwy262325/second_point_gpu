@@ -18,7 +18,7 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     sample_3d_repeat = sample_3d.repeat(positive_nums, 1, 1)
     # 为每个副本生成随机掩蔽（基于几何分布或随机掩蔽）mask(6,7,48)
     mask_index = noise_mask(sample_3d_repeat, masking_ratio, lm, distribution=distribution)
-    # mask_index = mask_index.to('cuda:0')
+    mask_index = mask_index.to('cuda:0')
     # 应用掩蔽：将掩蔽位置的值置为 0
     x_masked = mask_index * sample_3d_repeat
 
