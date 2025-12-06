@@ -45,7 +45,7 @@ class Flatten_Head(nn.Module):
 class Mask(nn.Module):
 
     def __init__(self, patch_size, in_channel, embed_dim, num_heads, mlp_ratio, dropout, mask_ratio, encoder_depth,
-                 decoder_depth, dim_in, dim_out, agcn_embed_dim, cheb_k, num_node, input_len,mask_distribution='geometric', lm=3,positive_nums=3, temperature =0.1, compression_ratio = 0.1, mode="pre-train"):
+                 decoder_depth, dim_in, dim_out, agcn_embed_dim, cheb_k, num_node, input_len,mask_distribution='geometric', lm=3, positive_nums=3, temperature =0.1, compression_ratio = 0.1, mode="pre-train"):
         super().__init__()
         assert mode in ["pre-train", "forecasting"], "Error mode."
         self.patch_size = patch_size

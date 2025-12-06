@@ -38,8 +38,9 @@ class MaskRunner(SimpleTimeSeriesForecastingRunner):
         # feed forward
         reconstruction_masked_tokens, label_masked_tokens, loss_cl = self.model(history_data=history_data, future_data=None, batch_seen=iter_num, epoch=epoch)
         results = {'prediction': reconstruction_masked_tokens, 'target': label_masked_tokens, 'inputs': history_data, 'loss_cl': loss_cl, 'awl_module': self.awl_module}
-        results = self.postprocessing(results)
-
+        # results = self.postprocessing(results)
+        if not train:
+            results = self.postprocessing(results)
         return results
 
     @torch.no_grad()
