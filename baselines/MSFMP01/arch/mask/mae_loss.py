@@ -34,7 +34,7 @@ class AutomaticWeightedLoss(nn.Module):
         return loss_sum
 
 
-def mae_loss_cl(prediction: torch.Tensor, target: torch.Tensor, loss_cl: torch.Tensor, awl_module: AutomaticWeightedLoss = None,null_val: float = np.nan) -> torch.Tensor:
+def mae_loss_cl(prediction: torch.Tensor, target: torch.Tensor, loss_cl: torch.Tensor, awl_module: AutomaticWeightedLoss = None, scaler = None, null_val: float = np.nan) -> torch.Tensor:
     """
     Calculate the Masked Mean Absolute Error (MAE) between the predicted and target values,
     while ignoring the entries in the target tensor that match the specified null value.
@@ -69,7 +69,11 @@ def mae_loss_cl(prediction: torch.Tensor, target: torch.Tensor, loss_cl: torch.T
     mask /= torch.mean(mask)  # Normalize mask to avoid bias in the loss due to the number of valid entries
     mask = torch.nan_to_num(mask)  # Replace any NaNs in the mask with zero
 
-    loss = torch.abs(prediction - target)
+    prediction_norm = prediction.clone()
+    target_norm = target.clone()
+    prediction_norm = scaler.transform(prediction_norm)
+    target_norm = scaler.transform(target_norm)
+    loss = torch.abs(prediction_norm - target_norm)
     loss = loss * mask  # Apply the mask to the loss
     loss = torch.nan_to_num(loss)  # Replace any NaNs in the loss with zero
     loss_mae_mean = torch.mean(loss)
