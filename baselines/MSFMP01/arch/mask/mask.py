@@ -35,10 +35,12 @@ class Flatten_Head(nn.Module):
     def __init__(self, d_model, patch_size, head_dropout=0):
         super().__init__()
         self.linear = nn.Linear(d_model, patch_size)
+        self.activation = nn.ReLU()
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):
         x = self.linear(x)
+        x = self.activation(x)
         x = self.dropout(x)
         return x
 
