@@ -78,12 +78,7 @@ class MSFMP(nn.Module):
 
         # hidden_states_t(8,207,72,96)
         hidden_states_t = self.tmae(long_history_data[..., [0]])
-        # 5. 删除空间掩蔽计算、不再使用空间特征拼接
-        # hidden_states_s = self.smae(long_history_data[..., [0]])
-        # hidden_states=torch.cat((hidden_states_t,hidden_states_s),-1)
-
-        # 6. 直接使用时间掩蔽特征
-        hidden_states = hidden_states_t
+        hidden_states = hidden_states_t.transpose(2, 3)
 
         # enhance
         out_len = 1

@@ -31,23 +31,24 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/Mask_TMAE_TEST.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/Mask_TMAE_MSFMP01_best_val_loss.pt",
     "mask_args": {
                     "patch_size":12,
                     "in_channel":1,
-                    "embed_dim":96,
+                    "embed_dim":32,
                     "num_heads":4,
                     "mlp_ratio":4,
                     "dropout":0.1,
-                    "mask_ratio":0.75,
+                    "mask_ratio":0.25,
                     "encoder_depth":4,
                     "decoder_depth":1,
                     "mode":"forecasting",
-                    "dim_in": 96,
-                    "dim_out": 96,
+                    "dim_in": 32,
+                    "dim_out": 32,
                     "agcn_embed_dim": 10,
                     "cheb_k": 2,
                     "num_node": 207,
+                    "input_len": INPUT_LEN // 12,
     },
     "backend_args": {
     "num_nodes": 207,
@@ -137,7 +138,7 @@ CFG.TRAIN.LOSS = masked_mae
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
 CFG.TRAIN.OPTIM.PARAM = {
-    "lr":0.001,
+    "lr":0.0001,
     "weight_decay":1.0e-5,
     "eps":1.0e-8,
 }

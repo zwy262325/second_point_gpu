@@ -78,7 +78,7 @@ class Mask(nn.Module):
         # # positional encoding
         self.positional_encoding = PositionalEncoding()
 
-    def encoder_decoder(self, long_term_history):
+    def encoding_decoding(self, long_term_history):
         mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
         mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
 
@@ -125,15 +125,40 @@ class Mask(nn.Module):
 
         return dec_out, long_term_history, loss_cl
 
+    def encoding(self, long_term_history):
+        mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
+        mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
+
+        # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
+        agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
+        patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
+
+        # 2.x_enc BTD(8,48,7)
+        batch_size, num_nodes, _, _ = long_term_history.shape
+
+        patches_reshaped = patches.reshape(batch_size * num_nodes, patches.shape[2], patches.shape[3])  # [(bs * n_vars) x seq_len x d_model]
+
+        # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
+        p_enc_out = self.encoder_new(patches_reshaped)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
+
+        # # 9.agg_enc_out(8,7,48,128)
+        _, seq_len, nums_dim = p_enc_out.shape
+        p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
+
+        # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
+        dec_out = self.projection(p_enc_out)  # dec_out: [bs x n_vars x seq_len]
+        dec_out = dec_out.view(batch_size , num_nodes, 1, -1)  # dec_out: [bs x seq_len x n_vars](8,207,24,12)
+
+        return dec_out
+
     def forward(self, history_data: torch.Tensor, future_data: torch.Tensor = None, batch_seen: int = None,
                 epoch: int = None, **kwargs) -> torch.Tensor:
         # reshape
         history_data = history_data.permute(0, 2, 3, 1)  # B, N, 1, L * P
         # feed forward
         if self.mode == "pre-train":
-            predict_result, original_result, loss_cl = self.encoder_decoder(history_data)
+            predict_result, original_result, loss_cl = self.encoding_decoding(history_data)
             return predict_result, original_result, loss_cl
-
         else:
-            hidden_states_full = self.encoding(history_data, mask=False)
+            hidden_states_full = self.encoding(history_data)
             return hidden_states_full
