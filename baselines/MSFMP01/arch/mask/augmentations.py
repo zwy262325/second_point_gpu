@@ -17,10 +17,9 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     # 对原始序列进行复制,生成 positive_nums 个副本,sample_repeat(6,7,48)
     sample_3d_repeat = sample_3d.repeat(positive_nums, 1, 1)
     # 为每个副本生成随机掩蔽（基于几何分布或随机掩蔽）mask(6,7,48)
-    mask_index = noise_mask(sample_3d_repeat, masking_ratio, lm, distribution=distribution,
-                            device=sample_3d_repeat.device)
-    # 应用掩蔽：将掩蔽位置的值置为 0
+    mask_index = noise_mask(sample_3d_repeat, masking_ratio, lm, distribution=distribution)
     # mask_index = mask_index.to('cuda:0')
+    # 应用掩蔽：将掩蔽位置的值置为 0
     x_masked = mask_index * sample_3d_repeat
 
     # 2.新增：原始序列和掩蔽序列拼接  # batch_x_om_3d(6624,96,72) B * (positive_num + 1)DT, mask_om_3d(6624,96,72)
@@ -28,13 +27,15 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     batch_x_om_3d = torch.cat([sample_3d, x_masked], dim=0)
     mask_om_3d = torch.cat([mask_o, mask_index], dim=0)
 
-    # # 3.新增：还原输出
-    # # 新的总批次大小: (P+1) * B_orig
-    # B_total_new = B_orig * (positive_nums + 1)
-    # batch_x_om = batch_x_om_3d.reshape(B_total_new, N_orig, T, D)
-    # mask_om = mask_om_3d.reshape(B_total_new, N_orig, T, D)
-    # # batch_x_om(32,207,72,96), mask_om(32,207,72,96)
-    return batch_x_om_3d.permute(0, 2, 1), mask_om_3d.permute(0, 2, 1)
+    # 3.新增：还原输出
+    # 新的总批次大小: (P+1) * B_orig
+    B_total_new = B_orig * (positive_nums + 1)
+    batch_x_om = batch_x_om_3d.reshape(B_total_new, N_orig, T, D)
+    mask_om = mask_om_3d.reshape(B_total_new, N_orig, T, D)
+    # batch_x_om(32,207,72,96), mask_om(32,207,72,96)
+    return batch_x_om, mask_om
+    # return batch_x_om_3d.permute(0,2,1).float(), mask_om_3d.permute(0,2,1).float()
+
 
 
 def geom_noise_mask_single(L, lm, masking_ratio):
@@ -64,7 +65,7 @@ def geom_noise_mask_single(L, lm, masking_ratio):
     return keep_mask
 
 
-def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_feats=None, device=None):
+def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_feats=None):
     """
     Creates a random boolean mask of the same shape as X, with 0s at places where a feature should be masked.
     Args:
@@ -82,24 +83,23 @@ def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_fe
     if exclude_feats is not None:
         exclude_feats = set(exclude_feats)
 
-    is_tensor = isinstance(X, torch.Tensor)
-    device = X.device if is_tensor else torch.device('cpu')
-
-    # ... (其他 distribution 逻辑不变) ...
-
     if distribution == 'geometric':  # stateful (Markov chain)
+        """
+           优化后：对每个样本独立生成掩码
+           X: 形状 (M, D, T)，其中 M = positive_nums * B * N
+           """
+        M, D, T = X.shape
+        sample_len = D * T
+        mask = np.zeros((M, D, T), dtype=bool)
 
-        # 仅在 X 是 PyTorch Tensor 时，使用 GPU 加速版本
-        if is_tensor and device.type != 'cpu':
-            L = X.shape[0] * X.shape[1] * X.shape[2]  # 总元素数
-            mask_1d = torch_geom_noise_mask_single(L, lm, masking_ratio, device=device)
-            mask = mask_1d.reshape(X.shape)
-        else:
-            # CPU/NumPy fallback for compatibility
-            # 这里是原有的 CPU 密集型调用
-            mask_1d = geom_noise_mask_single(X.shape[0] * X.shape[1] * X.shape[2], lm, masking_ratio)
-            mask_1d = mask_1d.reshape(X.shape[0], X.shape[1], X.shape[2])
-            mask = mask_1d
+        # 对每个样本独立生成掩码
+        for m in range(M):
+            # 为第m个样本生成独立的掩码
+            single_mask = geom_noise_mask_single(sample_len, lm, masking_ratio)
+            mask[m] = single_mask.reshape(D, T)
+
+        # mask = geom_noise_mask_single(X.shape[0] * X.shape[1] * X.shape[2], lm, masking_ratio)
+        # mask = mask.reshape(X.shape[0], X.shape[1], X.shape[2])
     elif distribution == 'masked_tail':
         mask = np.ones(X.shape, dtype=bool)
         for m in range(X.shape[0]):  # feature dimension
@@ -119,11 +119,7 @@ def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_fe
     else:  # each position is independent Bernoulli with p = 1 - masking_ratio
         mask = np.random.choice(np.array([True, False]), size=X.shape, replace=True,
                                 p=(1 - masking_ratio, masking_ratio))
-    if not is_tensor:
-        return torch.tensor(mask).to(device)
-    else:
-        # 如果 X 本身就是 Tensor，且我们已在 GPU 上生成了 mask，直接返回
-        return mask
+    return torch.tensor(mask)
 
 
 def one_hot_encoding(X):
@@ -143,25 +139,26 @@ def DataTransform(sample, config):
 
 
 def remove_frequency(x, pertub_ratio=0.0):
-    mask = torch.cuda.FloatTensor(x.shape).uniform_() > pertub_ratio  # maskout_ratio are False
+    mask = torch.cuda.FloatTensor(x.shape).uniform_() > pertub_ratio # maskout_ratio are False
     mask = mask.to(x.device)
-    return x * mask
+    return x*mask
 
 
 def add_frequency(x, pertub_ratio=0.0):
-    mask = torch.cuda.FloatTensor(x.shape).uniform_() > (1 - pertub_ratio)  # only pertub_ratio of all values are True
+
+    mask = torch.cuda.FloatTensor(x.shape).uniform_() > (1-pertub_ratio) # only pertub_ratio of all values are True
     mask = mask.to(x.device)
     max_amplitude = x.max()
-    random_am = torch.rand(mask.shape) * (max_amplitude * 0.1)
-    pertub_matrix = mask * random_am
-    return x + pertub_matrix
+    random_am = torch.rand(mask.shape)*(max_amplitude*0.1)
+    pertub_matrix = mask*random_am
+    return x+pertub_matrix
 
 
-def generate_binomial_mask(B, T, D, p=0.5):  # p is the ratio of not zero
+def generate_binomial_mask(B, T, D, p=0.5): # p is the ratio of not zero
     return torch.from_numpy(np.random.binomial(1, p, size=(B, T, D))).to(torch.bool)
 
 
-def masking(x, keepratio=0.9, mask='binomial'):
+def masking(x, keepratio=0.9, mask= 'binomial'):
     global mask_id
     nan_mask = ~x.isnan().any(axis=-1)
     x[~nan_mask] = 0
@@ -183,75 +180,3 @@ def masking(x, keepratio=0.9, mask='binomial'):
     x[~mask_id] = 0
     return x
 
-
-import torch
-import math
-
-
-def torch_geom_noise_mask_single(L: int, lm: float, masking_ratio: float, device: torch.device) -> torch.Tensor:
-    """
-    使用 PyTorch 张量操作并行生成长度为 L 的几何分布掩码。
-    （GPU 加速版本，已增加鲁棒性）
-    """
-    if L == 0:
-        return torch.empty(0, dtype=torch.bool, device=device)
-
-    # 1. 计算几何分布的成功概率 P (即一个段结束的概率)
-    p_m = 1.0 / lm
-
-    # 鲁棒性：防止 1 - masking_ratio = 0
-    if 1.0 - masking_ratio < 1e-6:
-        p_u = 1.0
-    else:
-        p_u = p_m * masking_ratio / (1.0 - masking_ratio)
-
-    # 鲁棒性：防止 p_m/p_u >= 1.0 导致 lambda <= 0
-    p_m = min(p_m, 0.99999)
-    p_u = min(p_u, 0.99999)
-
-    # 确保 lambda > 0，log(lambda) 不为 -Inf
-    lambda_m = torch.tensor(1.0 - p_m, device=device)
-    lambda_u = torch.tensor(1.0 - p_u, device=device)
-
-    # 2. 估计需要生成的段数：保持不变
-    avg_segment_length = (lm * (1 - masking_ratio)) + ((1 - masking_ratio) / p_u * masking_ratio) if p_u > 1e-6 else L
-    safe_segment_count = int(L / avg_segment_length) * 2 + 10
-    safe_segment_count = max(safe_segment_count, 1000)
-
-    # 3. 逆变换采样生成掩蔽段 (0s) 长度 K_m
-    EPS = 1e-6
-    # 鲁棒性：确保 U 严格大于 EPS，防止 log(U) 出现 -Inf
-    u_m = torch.rand(safe_segment_count, device=device).clamp(min=EPS)
-    # 鲁棒性：确保段长度至少为 1
-    k_m = torch.ceil(torch.log(u_m) / torch.log(lambda_m)).long().clamp(min=1)
-
-    # 4. 逆变换采样生成非掩蔽段 (1s) 长度 K_u
-    u_u = torch.rand(safe_segment_count, device=device).clamp(min=EPS)
-    k_u = torch.ceil(torch.log(u_u) / torch.log(lambda_u)).long().clamp(min=1)
-
-    # 5. 确定起始状态并交错合并段 (保持不变)
-    if torch.rand(1, device=device) > masking_ratio:
-        segments_lengths = torch.empty(2 * safe_segment_count, dtype=k_m.dtype, device=device)
-        segments_lengths[0::2] = k_u
-        segments_lengths[1::2] = k_m
-        segments_lengths = segments_lengths[1:]
-        segment_values = torch.tensor([1, 0], device=device).repeat(segments_lengths.shape[0] // 2 + 1)[
-                         :segments_lengths.shape[0]]
-    else:
-        segments_lengths = torch.empty(2 * safe_segment_count, dtype=k_m.dtype, device=device)
-        segments_lengths[0::2] = k_m
-        segments_lengths[1::2] = k_u
-        segment_values = torch.tensor([0, 1], device=device).repeat(segments_lengths.shape[0] // 2 + 1)[
-                         :segments_lengths.shape[0]]
-
-    # 6. 鲁棒性：限制单个 segment 长度，防止 SymInt 溢出
-    # MAX_SAFE_LENGTH 是防止溢出的关键，设置一个大于 L 的安全值。
-    MAX_SAFE_LENGTH = L * 2 + 10
-    segments_lengths = segments_lengths.clamp(max=MAX_SAFE_LENGTH)
-
-    full_mask_1d = torch.repeat_interleave(segment_values, segments_lengths)
-
-    # 7. 截断到所需长度 L
-    final_mask_1d = full_mask_1d[:L]
-
-    return final_mask_1d.bool()

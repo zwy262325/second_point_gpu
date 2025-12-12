@@ -4,7 +4,7 @@ from easydict import EasyDict
 sys.path.append(os.path.abspath(__file__ + '/../../..'))
 
 from basicts.metrics import masked_mae, masked_mape, masked_rmse
-from .arch.mask.mae_loss import mae_loss_cl
+from .arch.mask.mse_cl_loss import mse_cl_loss
 from basicts.scaler import ZScoreScaler
 from basicts.data import TimeSeriesForecastingDataset
 from basicts.utils import get_regular_settings
@@ -17,7 +17,7 @@ from .runner import MaskRunner
 DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
-INPUT_LEN = 288 * 3
+INPUT_LEN = 288
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -28,7 +28,7 @@ MODEL_ARCH = Mask
 MODEL_PARAM = {
     "patch_size":12,
     "in_channel":1,
-    "embed_dim":32,
+    "embed_dim":16,
     "num_heads":4,
     "mlp_ratio":4,
     "dropout":0.1,
@@ -36,12 +36,29 @@ MODEL_PARAM = {
     "encoder_depth":4,
     "decoder_depth":1,
     "mode":"pre-train",
-    "dim_in": 32,
-    "dim_out": 32,
+    "dim_in": 16,
+    "dim_out": 16,
     "agcn_embed_dim": 10,
     "cheb_k": 2,
     "num_node": 207,
     "input_len": INPUT_LEN // 12,
+    "simMTM_args":{
+        "mask_distribution": 'geometric',
+        "lm" : 3,
+        "positive_nums": 2,
+        "temperature": 2,
+        "compression_ratio":0.1
+    },
+    "transformer_args": {
+        "factor": 1,
+        "dropout": 0.1,
+        "output_attention": False,
+        "d_model": 32,
+        "n_heads": 4,
+        "d_ff": 256,
+        "activation": 'gelu',
+        "e_layers": 1,
+    }
 }
 NUM_EPOCHS = 100
 
@@ -105,12 +122,12 @@ CFG.TRAIN.CKPT_SAVE_DIR = os.path.join(
     CFG.MODEL.NAME,
     '_'.join([DATA_NAME, str(CFG.TRAIN.NUM_EPOCHS), str(INPUT_LEN), str(OUTPUT_LEN)])
 )
-CFG.TRAIN.LOSS = mae_loss_cl
+CFG.TRAIN.LOSS = mse_cl_loss
 # Optimizer settings
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
 CFG.TRAIN.OPTIM.PARAM = {
-    "lr":0.001,
+    "lr":0.0001,
     "weight_decay":0,
     "eps":1.0e-8,
     "betas":(0.9, 0.95)

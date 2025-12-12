@@ -4,12 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91647328-753b-4244-bdc6-edaaaaef81c7" name="Changes" comment="在mae_loss中对输入值进行归一化处理">
+    <list default="true" id="91647328-753b-4244-bdc6-edaaaaef81c7" name="Changes" comment="预训练输出添加激活函数">
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/layers/SelfAttention_Family.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/layers/Transformer_EncDec.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/layers/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/layers/losses.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/layers/masking.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mse_cl_loss.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/MSFMP_METRLA.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/MSFMP_METRLA.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/MSFMP.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/MSFMP.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/graphwavenet/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/graphwavenet/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/augmentations.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/augmentations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mae_loss.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask_strategy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +61,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "master",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/UserSoftWare/code/second_point_gpu/baselines/MSFMP01/mask_save",
+    "last_opened_file_path": "C:/UserSoftWare/code/second_point_gpu/baselines/MSFMP01/arch/mask",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -65,11 +72,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\UserSoftWare\code\second_point_gpu\baselines\MSFMP01\arch\mask" />
       <recent name="C:\UserSoftWare\code\second_point_gpu\baselines\MSFMP01\mask_save" />
       <recent name="C:\Code\BasicTS-master\baselines\ST-DC05all" />
       <recent name="C:\Code\BasicTS-master\baselines\ST-DC05-Ablation" />
       <recent name="C:\Code\BasicTS-master\baselines\ST-DC05all\mask_save" />
-      <recent name="C:\Code\BasicTS-master\checkpoints" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Code\BasicTS-master\baselines\ST-DC\arch\dcst" />
@@ -272,6 +279,12 @@
       <workItem from="1765007901443" duration="11765000" />
       <workItem from="1765078152726" duration="724000" />
       <workItem from="1765094781092" duration="1844000" />
+      <workItem from="1765098382350" duration="443000" />
+      <workItem from="1765102275074" duration="1868000" />
+      <workItem from="1765112173308" duration="969000" />
+      <workItem from="1765193596444" duration="64000" />
+      <workItem from="1765334118017" duration="5626000" />
+      <workItem from="1765510987709" duration="789000" />
     </task>
     <task id="LOCAL-00001" summary="掩蔽副本的生成">
       <option name="closed" value="true" />
@@ -305,7 +318,23 @@
       <option name="project" value="LOCAL" />
       <updated>1765028360807</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="下游预测拼接">
+      <option name="closed" value="true" />
+      <created>1765098394676</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1765098394676</updated>
+    </task>
+    <task id="LOCAL-00006" summary="预训练输出添加激活函数">
+      <option name="closed" value="true" />
+      <created>1765102946686</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1765102946686</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -327,7 +356,9 @@
     <MESSAGE value="将重建损失和对比损失对齐在归一化的尺度" />
     <MESSAGE value="1.将重建损失和对比损失对齐在归一化的尺度&#10;2.修改ContrastiveWeight&amp;AggregationRebuild使其在GPU上运行" />
     <MESSAGE value="在mae_loss中对输入值进行归一化处理" />
-    <option name="LAST_COMMIT_MESSAGE" value="在mae_loss中对输入值进行归一化处理" />
+    <MESSAGE value="下游预测拼接" />
+    <MESSAGE value="预训练输出添加激活函数" />
+    <option name="LAST_COMMIT_MESSAGE" value="预训练输出添加激活函数" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
