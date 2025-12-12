@@ -4,16 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91647328-753b-4244-bdc6-edaaaaef81c7" name="Changes" comment="预训练输出添加激活函数">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/BasicTS-master.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/BasicTS-master.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="91647328-753b-4244-bdc6-edaaaaef81c7" name="Changes" comment="1.gpu版本更新">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/TMAE_METRLA.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/TMAE_METRLA.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/augmentations.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/augmentations.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/arch/mask/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/baselines/MSFMP01/runner/mask_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/MSFMP01/runner/mask_runner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,6 +71,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "project.propVCSSupport.Mappings",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -296,7 +290,7 @@
       <workItem from="1765193596444" duration="64000" />
       <workItem from="1765334118017" duration="5626000" />
       <workItem from="1765510987709" duration="789000" />
-      <workItem from="1765526931045" duration="623000" />
+      <workItem from="1765526931045" duration="3959000" />
     </task>
     <task id="LOCAL-00001" summary="掩蔽副本的生成">
       <option name="closed" value="true" />
@@ -346,7 +340,15 @@
       <option name="project" value="LOCAL" />
       <updated>1765102946686</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="1.gpu版本更新">
+      <option name="closed" value="true" />
+      <created>1765528478565</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1765528478565</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -370,15 +372,16 @@
     <MESSAGE value="在mae_loss中对输入值进行归一化处理" />
     <MESSAGE value="下游预测拼接" />
     <MESSAGE value="预训练输出添加激活函数" />
-    <option name="LAST_COMMIT_MESSAGE" value="预训练输出添加激活函数" />
+    <MESSAGE value="1.gpu版本更新" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.gpu版本更新" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/baselines/MSFMP01/arch/mask/mask.py</url>
-          <line>168</line>
-          <option name="timeStamp" value="2" />
+          <line>179</line>
+          <option name="timeStamp" value="7" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -416,7 +419,7 @@
     <SUITE FILE_PATH="coverage/BasicTS_master$Doctests_in_BaseEpochRunner__1_.coverage" NAME="Doctests in BaseEpochRunner (1) Coverage Results" MODIFIED="1731999011772" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/basicts/runners" />
     <SUITE FILE_PATH="coverage/BasicTS_master$train.coverage" NAME="train Coverage Results" MODIFIED="1735121159627" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
     <SUITE FILE_PATH="coverage/BasicTS_master$Doctests_in_BaseEpochRunner.coverage" NAME="Doctests in BaseEpochRunner Coverage Results" MODIFIED="1731986541655" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/basicts/runners" />
-    <SUITE FILE_PATH="coverage/STEP_METR_LA_py$train.coverage" NAME="train 覆盖结果" MODIFIED="1765527414859" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/STEP_METR_LA_py$train.coverage" NAME="train 覆盖结果" MODIFIED="1765531731860" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
     <SUITE FILE_PATH="coverage/BasicTS_master$metr_la_pkl.coverage" NAME="metr-la_pkl Coverage Results" MODIFIED="1733147218453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Test" />
     <SUITE FILE_PATH="coverage/BasicTS_master$mask.coverage" NAME="mask Coverage Results" MODIFIED="1732582437080" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/baselines/STDMAE/arch/mask" />
     <SUITE FILE_PATH="coverage/BasicTS_master$SMAE_METRLA.coverage" NAME="SMAE_METRLA Coverage Results" MODIFIED="1733974006890" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/baselines/ST-DC" />

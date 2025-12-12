@@ -44,7 +44,8 @@ class Flatten_Head(nn.Module):
     def __init__(self, seq_len, d_model, pred_len, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
-        self.linear = nn.Linear(seq_len*d_model, pred_len)
+        self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
+        # self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):  # [bs x n_vars x seq_len x d_model]
@@ -176,9 +177,9 @@ class Mask(nn.Module):
         # 特征维度转换1->128
         enc_out = self.enc_embedding(x_enc)
 
-        # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
-        p_enc_out, _ = self.encoder(enc_out)
-        # p_enc_out = self.encoder_new(enc_out)
+        p_enc_out, _ = self.encoder(enc_out) # 使用通道
+        # p_enc_out, _ = self.encoder(x_enc) # 不使用通道
+        # p_enc_out = self.encoder_new(x_enc)
 
         # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
         s_enc_out = self.pooler(p_enc_out)
