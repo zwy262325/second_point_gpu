@@ -44,8 +44,8 @@ class Flatten_Head(nn.Module):
     def __init__(self, seq_len, d_model, pred_len, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
-        # self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
-        self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
+        self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
+        # self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):  # [bs x n_vars x seq_len x d_model]
@@ -72,9 +72,9 @@ class Mask(nn.Module):
 
 
         # 新增：初始化augmentations掩蔽参数
-        self.mask_distribution = simMTM_args.mask_distribution  # 掩蔽分布类型
-        self.lm = simMTM_args.lm  # 几何分布的平均掩蔽长度（仅当distribution='geometric'时使用）
-        self.positive_nums = simMTM_args.positive_nums # 数据的副本数量
+        self.mask_distribution = simMTM_args.mask_distribution
+        self.lm = simMTM_args.lm
+        self.positive_nums = simMTM_args.positive_nums
         self.masked_data = masked_data
         self.mse = torch.nn.MSELoss()
         self.awl = AutomaticWeightedLoss(2)
@@ -169,16 +169,16 @@ class Mask(nn.Module):
 
         bs, node, seq_len, n_vars = x_enc.shape
 
-        # # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
-        # x_enc = x_enc.permute(0, 3, 1, 2)
-        # x_enc = x_enc.unsqueeze(-1)
-        # x_enc = x_enc.reshape(-1, node, seq_len, 1)
-        #
-        # # 特征维度转换1->128
-        # enc_out = self.enc_embedding(x_enc)
-        #
-        # p_enc_out, _ = self.encoder(enc_out) # 使用通道
-        p_enc_out, _ = self.encoder(x_enc) # 不使用通道
+        # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
+        x_enc = x_enc.permute(0, 3, 1, 2)
+        x_enc = x_enc.unsqueeze(-1)
+        x_enc = x_enc.reshape(-1, node, seq_len, 1)
+
+        # 特征维度转换
+        enc_out = self.enc_embedding(x_enc)
+
+        p_enc_out, _ = self.encoder(enc_out) # 使用通道
+        # p_enc_out, _ = self.encoder(x_enc) # 不使用通道
         # p_enc_out = self.encoder_new(x_enc)
 
         # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
@@ -191,7 +191,7 @@ class Mask(nn.Module):
         # 重建权重矩阵(56,56)  加强后的序列agg_enc_out(56,48,128)
         rebuild_weight_matrix, agg_enc_out = self.aggregation(similarity_matrix, p_enc_out)
 
-        #  9.agg_enc_out(8,7,48,128)
+        # 9.agg_enc_out(8,7,48,128)
         agg_enc_out = agg_enc_out.reshape(bs, node, n_vars, seq_len, -1)
 
         # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
