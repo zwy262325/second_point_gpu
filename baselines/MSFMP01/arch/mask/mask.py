@@ -103,7 +103,7 @@ class Mask(nn.Module):
         self.aggregation = AggregationRebuild(simMTM_args.temperature, simMTM_args.positive_nums)
         self.projection = Flatten_Head(input_len, transformer_args.d_model, input_len, head_dropout=dropout)
         # 新加
-        self.fc_patch_size = nn.Sequential(nn.Linear(16, patch_size))
+        self.fc_patch_size = nn.Sequential(nn.Linear(32, patch_size))
         # Embedding
         self.enc_embedding = DataEmbedding(1, 32)
 
@@ -155,7 +155,7 @@ class Mask(nn.Module):
         stdev = torch.sqrt(torch.sum(x_enc * x_enc, dim=2) / torch.sum(mask_index == 1, dim=2) + 1e-5)
         stdev = stdev.unsqueeze(2).detach()
         x_enc /= stdev
-
+        # # ===================== 步骤2：归一化校验=====================
         # print("x_enc1:", x_enc.max())
         # print("x_enc1:", x_enc.min())
         # print("x_enc1:", x_enc.mean())

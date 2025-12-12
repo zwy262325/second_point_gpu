@@ -16,24 +16,53 @@ class ContrastiveWeight(nn.Module):
         self.kl = torch.nn.KLDivLoss(reduction='batchmean')
         self.positive_nums = positive_nums
 
+    import torch
+    import torch.nn.functional as F
+    # 注意：移除了 import numpy as np
+
     def get_positive_and_negative_mask(self, similarity_matrix, cur_batch_size):
+        # 确保 device 从输入张量获取
         device = similarity_matrix.device
+
+        # 1. 生成对角线掩码 (mask)
         mask = torch.eye(cur_batch_size, dtype=torch.bool, device=device)
+
         oral_batch_size = cur_batch_size // (self.positive_nums + 1)
-        positives_mask = torch.zeros(similarity_matrix.size(), dtype=torch.bool, device=device)
+
+        # 2. 初始化正样本掩码 (positives_mask) - 必须是 float 或 bool，这里用 bool 效率更高
+        positives_mask = torch.zeros(cur_batch_size, cur_batch_size, dtype=torch.bool, device=device)
+
         for i in range(self.positive_nums + 1):
-            ll = np.eye(cur_batch_size, cur_batch_size, k=oral_batch_size * i)
-            lr = np.eye(cur_batch_size, cur_batch_size, k=-oral_batch_size * i)
-            positives_mask += ll
-            positives_mask += lr
+            k_val = oral_batch_size * i
 
-        positives_mask = torch.from_numpy(positives_mask).to(similarity_matrix.device)
-        positives_mask[mask] = 0
+            # 确保偏移量不超过矩阵大小
+            if k_val >= cur_batch_size:
+                break
 
-        negatives_mask = 1 - positives_mask
-        negatives_mask[mask] = 0
+            # 使用纯 PyTorch 操作生成偏移对角线 (相当于 np.eye(..., k=...))
+            diag_len = cur_batch_size - abs(k_val)
 
-        return positives_mask.type(torch.bool), negatives_mask.type(torch.bool)
+            # 创建对角线上的值
+            ones_diag = torch.ones(diag_len, device=device, dtype=torch.bool)
+
+            # 上偏移 k (ll)
+            ll = torch.diag(ones_diag, diagonal=k_val)
+            # 下偏移 -k (lr)
+            lr = torch.diag(ones_diag, diagonal=-k_val)
+
+            # 累加掩码 (使用逻辑或 | 代替加法)
+            positives_mask = positives_mask | ll | lr
+
+        # 3. 移除自身 (对角线)
+        # positives_mask[mask] = 0 的 PyTorch 等价形式
+        positives_mask[mask] = False
+
+        # 4. 生成负样本掩码
+        # 1 - positives_mask ( float/int ) 替换为逻辑非 ~
+        # 确保负样本掩码中也排除了对角线
+        negatives_mask = (~positives_mask) & (~mask)
+
+        return positives_mask, negatives_mask
 
     def forward(self, batch_emb_om):
         # batch_emb_om形状: (T, N, D)
