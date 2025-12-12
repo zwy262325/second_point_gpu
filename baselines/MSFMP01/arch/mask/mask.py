@@ -44,8 +44,8 @@ class Flatten_Head(nn.Module):
     def __init__(self, seq_len, d_model, pred_len, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
-        self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
-        # self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
+        # self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
+        self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):  # [bs x n_vars x seq_len x d_model]
@@ -80,7 +80,7 @@ class Mask(nn.Module):
         self.awl = AutomaticWeightedLoss(2)
 
         # encoder_new
-        self.encoder_new = TransformerLayers(32, encoder_depth, mlp_ratio, num_heads, dropout)
+        self.encoder_new = TransformerLayers(16, encoder_depth, mlp_ratio, num_heads, dropout)
 
         #Encoder
         self.encoder = Encoder(
@@ -104,7 +104,7 @@ class Mask(nn.Module):
         self.aggregation = AggregationRebuild(simMTM_args.temperature, simMTM_args.positive_nums)
         self.projection = Flatten_Head(input_len, transformer_args.d_model, input_len, head_dropout=dropout)
         # 新加
-        self.fc_patch_size = nn.Sequential(nn.Linear(32, patch_size))
+        self.fc_patch_size = nn.Sequential(nn.Linear(self.embed_dim, patch_size))
         # Embedding
         self.enc_embedding = DataEmbedding(1, 32)
 
@@ -169,16 +169,16 @@ class Mask(nn.Module):
 
         bs, node, seq_len, n_vars = x_enc.shape
 
-        # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
-        x_enc = x_enc.permute(0, 3, 1, 2)
-        x_enc = x_enc.unsqueeze(-1)
-        x_enc = x_enc.reshape(-1, node, seq_len, 1)
-
-        # 特征维度转换1->128
-        enc_out = self.enc_embedding(x_enc)
-
-        p_enc_out, _ = self.encoder(enc_out) # 使用通道
-        # p_enc_out, _ = self.encoder(x_enc) # 不使用通道
+        # # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
+        # x_enc = x_enc.permute(0, 3, 1, 2)
+        # x_enc = x_enc.unsqueeze(-1)
+        # x_enc = x_enc.reshape(-1, node, seq_len, 1)
+        #
+        # # 特征维度转换1->128
+        # enc_out = self.enc_embedding(x_enc)
+        #
+        # p_enc_out, _ = self.encoder(enc_out) # 使用通道
+        p_enc_out, _ = self.encoder(x_enc) # 不使用通道
         # p_enc_out = self.encoder_new(x_enc)
 
         # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
