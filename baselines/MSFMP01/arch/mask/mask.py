@@ -6,7 +6,7 @@ from .positional_encoding import PositionalEncoding
 from .transformer_layers import TransformerLayers
 from .agcrn1 import AVWGCN
 import numpy as np  # 新增：用于掩蔽生成
-from .augmentations import masked_data, geom_noise_mask_single # 新增：导入augmentations中的掩蔽函数
+from .augmentations import masked_data
 # from .transformer_layers_new import TransformerLayers
 from .tools import ContrastiveWeight, AggregationRebuild
 from .tools import DataEmbedding

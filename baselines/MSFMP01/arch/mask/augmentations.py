@@ -35,90 +35,52 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     return batch_x_om, mask_om
     # return batch_x_om_3d.permute(0,2,1).float(), mask_om_3d.permute(0,2,1).float()
 
+import torch
 
-
-def geom_noise_mask_single(L, lm, masking_ratio):
+def geom_noise_mask_vectorized_gpu(L, lm, masking_ratio, device, batch_size=1):
     """
-    Randomly create a boolean mask of length `L`, consisting of subsequences of average length lm, masking with 0s a `masking_ratio`
-    proportion of the sequence L. The length of masking subsequences and intervals follow a geometric distribution.
+    向量化GPU版本：无逐元素循环，批量生成多个样本的掩码
     Args:
-        L: length of mask and sequence to be masked
-        lm: average length of masking subsequences (streaks of 0s)
-        masking_ratio: proportion of L to be masked
+        L: 单个样本的掩码长度
+        lm: 几何分布平均长度
+        masking_ratio: 掩码比例
+        device: 执行设备
+        batch_size: 一次性生成多少个样本的掩码（M）
     Returns:
-        (L,) boolean numpy array intended to mask ('drop') with 0s a sequence of length L
+        (batch_size, L) torch.bool: 批量掩码
     """
-    keep_mask = np.ones(L, dtype=bool)
-    p_m = 1 / lm  # probability of each masking sequence stopping. parameter of geometric distribution.
-    p_u = p_m * masking_ratio / (
-            1 - masking_ratio)  # probability of each unmasked sequence stopping. parameter of geometric distribution.
-    p = [p_m, p_u]
+    p_m = 1.0 / lm
+    p_u = p_m * masking_ratio / (1 - masking_ratio)
+    rand_init = torch.rand(batch_size, device=device)
+    rand_switch = torch.rand(batch_size, L, device=device)
+    init_state = (rand_init > masking_ratio).int()
+    state = init_state.unsqueeze(1).repeat(1, L)
+    p_m_tensor = torch.full((batch_size, L), p_m, device=device)
+    p_u_tensor = torch.full((batch_size, L), p_u, device=device)
+    p = torch.where(state == 0, p_m_tensor, p_u_tensor)
+    switch = rand_switch < p
+    switch_cumsum = torch.cumsum(switch.int(), dim=1)
+    final_state = (state + switch_cumsum) % 2
+    return final_state.bool()
 
-    # Start in state 0 with masking_ratio probability
-    state = int(np.random.rand() > masking_ratio)  # state 0 means masking, 1 means not masking
-    for i in range(L):
-        keep_mask[i] = state  # here it happens that state and masking value corresponding to state are identical
-        if np.random.rand() < p[state]:
-            state = 1 - state
-
-    return keep_mask
-
-
+# 升级noise_mask的geometric分支
 def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_feats=None):
-    """
-    Creates a random boolean mask of the same shape as X, with 0s at places where a feature should be masked.
-    Args:
-        X: (seq_length, feat_dim) numpy array of features corresponding to a single sample
-        masking_ratio: proportion of seq_length to be masked. At each time step, will also be the proportion of
-            feat_dim that will be masked on average
-        lm: average length of masking subsequences (streaks of 0s). Used only when `distribution` is 'geometric'.
-        distribution: whether each mask sequence element is sampled independently at random, or whether
-            sampling follows a markov chain (and thus is stateful), resulting in geometric distributions of
-            masked squences of a desired mean length `lm`
-        exclude_feats: iterable of indices corresponding to features to be excluded from masking (i.e. to remain all 1s)
-    Returns:
-        boolean numpy array with the same shape as X, with 0s at places where a feature should be masked
-    """
     if exclude_feats is not None:
         exclude_feats = set(exclude_feats)
-
-    if distribution == 'geometric':  # stateful (Markov chain)
-        """
-           优化后：对每个样本独立生成掩码
-           X: 形状 (M, D, T)，其中 M = positive_nums * B * N
-           """
-        M, D, T = X.shape
-        sample_len = D * T
-        mask = np.zeros((M, D, T), dtype=bool)
-
-        # 对每个样本独立生成掩码
-        for m in range(M):
-            # 为第m个样本生成独立的掩码
-            single_mask = geom_noise_mask_single(sample_len, lm, masking_ratio)
-            mask[m] = single_mask.reshape(D, T)
-
-        # mask = geom_noise_mask_single(X.shape[0] * X.shape[1] * X.shape[2], lm, masking_ratio)
-        # mask = mask.reshape(X.shape[0], X.shape[1], X.shape[2])
-    elif distribution == 'masked_tail':
-        mask = np.ones(X.shape, dtype=bool)
-        for m in range(X.shape[0]):  # feature dimension
-
-            keep_mask = np.zeros_like(mask[m, :], dtype=bool)
-            n = math.ceil(keep_mask.shape[1] * (1 - masking_ratio))
-            keep_mask[:, :n] = True
-            mask[m, :] = keep_mask  # time dimension
-    elif distribution == 'masked_head':
-        mask = np.ones(X.shape, dtype=bool)
-        for m in range(X.shape[0]):  # feature dimension
-
-            keep_mask = np.zeros_like(mask[m, :], dtype=bool)
-            n = math.ceil(keep_mask.shape[1] * masking_ratio)
-            keep_mask[:, n:] = True
-            mask[m, :] = keep_mask  # time dimension
-    else:  # each position is independent Bernoulli with p = 1 - masking_ratio
-        mask = np.random.choice(np.array([True, False]), size=X.shape, replace=True,
-                                p=(1 - masking_ratio, masking_ratio))
-    return torch.tensor(mask)
+    device = X.device
+    M, D, T = X.shape
+    sample_len = D * T
+    if distribution == 'geometric':
+        # 向量化GPU生成所有M个样本的掩码（无循环）
+        batch_masks = geom_noise_mask_vectorized_gpu(
+            L=sample_len,
+            lm=lm,
+            masking_ratio=masking_ratio,
+            device=device,
+            batch_size=M
+        )
+        mask = batch_masks.reshape(M, D, T)  # (M, D, T)
+    return mask
 
 
 def one_hot_encoding(X):

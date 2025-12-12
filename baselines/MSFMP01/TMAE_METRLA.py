@@ -45,7 +45,7 @@ MODEL_PARAM = {
     "simMTM_args":{
         "mask_distribution": 'geometric',
         "lm" : 3,
-        "positive_nums": 2,
+        "positive_nums": 3,
         "temperature": 2,
         "compression_ratio":0.1
     },
@@ -141,9 +141,9 @@ CFG.TRAIN.LR_SCHEDULER.PARAM = {
 }
 # Train data loader settings
 CFG.TRAIN.DATA = EasyDict()
-CFG.TRAIN.DATA.BATCH_SIZE = 32
+CFG.TRAIN.DATA.BATCH_SIZE = 4
 CFG.TRAIN.DATA.SHUFFLE = True
-CFG.TRAIN.DATA.NUM_WORKERS = 8
+CFG.TRAIN.DATA.NUM_WORKERS = 4
 CFG.TRAIN.DATA.PIN_MEMORY = True
 CFG.TRAIN.CLIP_GRAD_PARAM = {
     "max_norm": 5.0
@@ -154,16 +154,16 @@ CFG.TRAIN.EARLY_STOPPING_PATIENCE = 20
 CFG.VAL = EasyDict()
 CFG.VAL.INTERVAL = 1
 CFG.VAL.DATA = EasyDict()
-CFG.VAL.DATA.BATCH_SIZE = 32
-CFG.VAL.DATA.NUM_WORKERS = 8
+CFG.VAL.DATA.BATCH_SIZE = 4
+CFG.VAL.DATA.NUM_WORKERS = 4
 CFG.VAL.DATA.PIN_MEMORY = True
 
 ############################## Test Configuration ##############################
 CFG.TEST = EasyDict()
 CFG.TEST.INTERVAL = 1
 CFG.TEST.DATA = EasyDict()
-CFG.TEST.DATA.BATCH_SIZE = 32
-CFG.TEST.DATA.NUM_WORKERS = 8
+CFG.TEST.DATA.BATCH_SIZE = 4
+CFG.TEST.DATA.NUM_WORKERS = 4
 CFG.TEST.DATA.PIN_MEMORY = True
 
 ############################## Evaluation Configuration ##############################
