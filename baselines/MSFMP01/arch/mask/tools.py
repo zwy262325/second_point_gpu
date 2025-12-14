@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import torch.nn as nn
@@ -16,9 +15,7 @@ class ContrastiveWeight(nn.Module):
         self.kl = torch.nn.KLDivLoss(reduction='batchmean')
         self.positive_nums = positive_nums
 
-    import torch
     import torch.nn.functional as F
-    # 注意：移除了 import numpy as np
 
     def get_positive_and_negative_mask(self, similarity_matrix, cur_batch_size):
         # 确保 device 从输入张量获取
@@ -65,15 +62,43 @@ class ContrastiveWeight(nn.Module):
         return positives_mask, negatives_mask
 
     def forward(self, batch_emb_om):
+
+        # # ======================================
+        # # 步骤1：检测原始输入batch_emb_om（链路起点）
+        # # ======================================
+        # self._detect_nan_inf(
+        #     tensor=batch_emb_om,
+        #     step_name="原始输入 batch_emb_om"
+        # )
+        #
+
         # batch_emb_om形状: (T, N, D)
         cur_batch_shape = batch_emb_om.shape  # (T, N, D)
 
         # 对每个节点的特征进行归一化
         norm_emb = F.normalize(batch_emb_om, dim=2)  # (T, N, D)
 
+        # # ======================================
+        # # 步骤2：检测归一化后的norm_emb
+        # # ======================================
+        # # 检测归一化后的张量
+        # self._detect_nan_inf(
+        #     tensor=norm_emb,
+        #     step_name="归一化后的 norm_emb",
+        #
+        # )
+
         # 转置以便向量化计算
         # 形状: (N, T, D)
         norm_emb_transposed = norm_emb.transpose(0, 1)
+
+        # # ======================================
+        # # 步骤3：检测转置后的norm_emb_transposed
+        # # ======================================
+        # self._detect_nan_inf(
+        #     tensor=norm_emb_transposed,
+        #     step_name="转置后的 norm_emb_transposed"
+        # )
 
         # 计算批处理相似度矩阵
         # 使用torch.matmul的批处理功能
@@ -81,6 +106,18 @@ class ContrastiveWeight(nn.Module):
             norm_emb_transposed,  # (N, T, D)
             norm_emb_transposed.transpose(1, 2)  # (N, D, T)
         )  # 结果形状: (N, T, T)
+
+        # # ======================================
+        # # 步骤4：检测相似度矩阵similarity_matrix
+        # # ======================================
+        # self._detect_nan_inf(
+        #     tensor=similarity_matrix,
+        #     step_name="相似度矩阵 similarity_matrix",
+        #     extra_info={
+        #         "相似度矩阵均值": similarity_matrix.mean().item(),
+        #         "相似度矩阵范围": (similarity_matrix.min().item(), similarity_matrix.max().item())
+        #     }
+        # )
 
         # 初始化存储
         batch_size_T = cur_batch_shape[0]
@@ -125,6 +162,50 @@ class ContrastiveWeight(nn.Module):
         logits_all = torch.cat(all_logits, dim=0)  # (N, T, num_samples)
 
         return avg_loss, similarity_matrix, logits_all, None
+
+ # # ======================================
+ #    # 封装的nan/inf检测函数（复用性强，避免重复代码）
+ #    # ======================================
+ #    def _detect_nan_inf(self, tensor, step_name, extra_info=None, only_print_if_abnormal=False):
+ #        """
+ #        检测张量中的nan/inf，并打印详细信息
+ #        :param tensor: 要检测的张量
+ #        :param step_name: 步骤名称（用于标识打印的位置）
+ #        :param extra_info: 额外要打印的信息（字典格式，可选）
+ #        :param only_print_if_abnormal: 仅当存在nan/inf时才打印（减少正常情况下的冗余输出）
+ #        """
+ #        # 判断是否存在nan/inf
+ #        has_nan = torch.any(torch.isnan(tensor)).item()
+ #        has_inf = torch.any(torch.isinf(tensor)).item()
+ #
+ #        # 如果设置了only_print_if_abnormal，且无异常，则直接返回
+ #        if only_print_if_abnormal and not (has_nan or has_inf):
+ #            return
+ #
+ #        # 开始打印信息
+ #        print(f"\n========== 检测步骤：{step_name} ==========")
+ #        # 1. 张量的基本信息（形状、设备、数据类型）
+ #        print(f"张量形状：{tensor.shape}")
+ #        print(f"张量设备：{tensor.device}")
+ #        print(f"是否包含nan：{has_nan}")
+ #        print(f"是否包含inf：{has_inf}")
+ #
+ #        # 2. 如果存在nan/inf，打印其位置（前5个，避免输出过多）
+ #        if has_nan:
+ #            nan_indices = torch.where(torch.isnan(tensor))
+ #            # 只取前5个nan的位置（防止张量过大时输出刷屏）
+ #            nan_indices_truncated = [idx[:5] for idx in nan_indices]
+ #            print(f"nan的位置（前5个）：{list(zip(*nan_indices_truncated))}")
+ #
+ #        if has_inf:
+ #            inf_indices = torch.where(torch.isinf(tensor))
+ #            inf_indices_truncated = [idx[:5] for idx in inf_indices]
+ #            print(f"inf的位置（前5个）：{list(zip(*inf_indices_truncated))}")
+ #
+ #        # 3. 张量的统计信息（均值、最大/最小值，判断数值是否异常）
+ #        print(f"张量均值：{tensor.mean().item():.6f}")
+ #        print(f"张量最大值：{tensor.max().item():.6f}")
+ #        print(f"张量最小值：{tensor.min().item():.6f}")
 
 
 class AggregationRebuild(torch.nn.Module):

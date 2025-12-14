@@ -44,14 +44,14 @@ class Flatten_Head(nn.Module):
     def __init__(self, seq_len, d_model, pred_len, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
-        self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
-        # self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
+        # self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
+        self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):  # [bs x n_vars x seq_len x d_model]
-        x = self.flatten(x) # [bs x n_vars x (seq_len * d_model)]
-        x = self.linear(x) # [bs x n_vars x seq_len]
-        x = self.dropout(x) # [bs x n_vars x seq_len]
+        x = self.flatten(x)
+        x = self.linear(x)
+        x = self.dropout(x)
         return x
 
 class Mask(nn.Module):
@@ -106,7 +106,7 @@ class Mask(nn.Module):
         # 新加
         self.fc_patch_size = nn.Sequential(nn.Linear(self.embed_dim, patch_size))
         # Embedding
-        self.enc_embedding = DataEmbedding(1, 32)
+        # self.enc_embedding = DataEmbedding(1, 96)
 
         self.node_embeddings = nn.Parameter(torch.randn(num_node, agcn_embed_dim), requires_grad=True)
         self.AVWGCN = AVWGCN(dim_in, dim_out, cheb_k, agcn_embed_dim)
@@ -148,14 +148,14 @@ class Mask(nn.Module):
         #
         # print(f"mask有效数(mask_sum)统计 - 最小值: {mask_min}, 最大值: {mask_max}, 全0数量: {mask_zero_count}")
 
-        #归一化,处理缺失值x_enc(8,48,7)
-        means = torch.sum(x_enc, dim=2) / torch.sum(mask_index == 1, dim=2)
-        means = means.unsqueeze(2).detach()
-        x_enc = x_enc - means
-        x_enc = x_enc.masked_fill(mask_index == 0, 0)
-        stdev = torch.sqrt(torch.sum(x_enc * x_enc, dim=2) / torch.sum(mask_index == 1, dim=2) + 1e-5)
-        stdev = stdev.unsqueeze(2).detach()
-        x_enc /= stdev
+        # #归一化,处理缺失值x_enc(8,48,7)
+        # means = torch.sum(x_enc, dim=2) / torch.sum(mask_index == 1, dim=2)
+        # means = means.unsqueeze(2).detach()
+        # x_enc = x_enc - means
+        # x_enc = x_enc.masked_fill(mask_index == 0, 0)
+        # stdev = torch.sqrt(torch.sum(x_enc * x_enc, dim=2) / torch.sum(mask_index == 1, dim=2) + 1e-5)
+        # stdev = stdev.unsqueeze(2).detach()
+        # x_enc /= stdev
         # # ===================== 步骤2：归一化校验=====================
         # print("x_enc1:", x_enc.max())
         # print("x_enc1:", x_enc.min())
@@ -169,16 +169,16 @@ class Mask(nn.Module):
 
         bs, node, seq_len, n_vars = x_enc.shape
 
-        # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
-        x_enc = x_enc.permute(0, 3, 1, 2)
-        x_enc = x_enc.unsqueeze(-1)
-        x_enc = x_enc.reshape(-1, node, seq_len, 1)
+        # # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
+        # x_enc = x_enc.permute(0, 3, 1, 2)
+        # x_enc = x_enc.unsqueeze(-1)
+        # x_enc = x_enc.reshape(-1, node, seq_len, 1)
+        #
+        # # 特征维度转换
+        # enc_out = self.enc_embedding(x_enc)
 
-        # 特征维度转换
-        enc_out = self.enc_embedding(x_enc)
-
-        p_enc_out, _ = self.encoder(enc_out) # 使用通道
-        # p_enc_out, _ = self.encoder(x_enc) # 不使用通道
+        # p_enc_out, _ = self.encoder(enc_out) # 使用通道
+        p_enc_out, _ = self.encoder(x_enc) # 不使用通道
         # p_enc_out = self.encoder_new(x_enc)
 
         # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
@@ -192,15 +192,15 @@ class Mask(nn.Module):
         rebuild_weight_matrix, agg_enc_out = self.aggregation(similarity_matrix, p_enc_out)
 
         # 9.agg_enc_out(8,7,48,128)
-        agg_enc_out = agg_enc_out.reshape(bs, node, n_vars, seq_len, -1)
+        agg_enc_out = agg_enc_out.view(bs, node, n_vars, seq_len, -1)
 
         # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
         dec_out = self.projection(agg_enc_out)
         dec_out = dec_out.permute(0, 1, 3, 2)
 
-        # 逆标准化dec_out(8,48,7),将重建的序列还原到原始数据的尺度
-        dec_out = dec_out * (stdev[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
-        dec_out = dec_out + (means[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
+        # # 逆标准化dec_out(8,48,7),将重建的序列还原到原始数据的尺度
+        # dec_out = dec_out * (stdev[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
+        # dec_out = dec_out + (means[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
 
         dec_out = self.fc_patch_size(dec_out)
         dec_out = dec_out.view(batch_size * (self.positive_nums + 1), num_nodes, 1, -1)
@@ -212,6 +212,10 @@ class Mask(nn.Module):
 
         # 总体损失计算
         loss = self.awl(loss_cl, loss_rb)
+
+        print("训练损失:", loss)
+        print("重建损失:", loss_rb)
+        print("对比损失:", loss_cl)
 
         return dec_out, long_term_history, loss
 
