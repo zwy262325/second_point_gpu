@@ -213,35 +213,31 @@ class Mask(nn.Module):
         # 总体损失计算
         loss = self.awl(loss_cl, loss_rb)
 
-        print("训练损失:", loss)
-        print("重建损失:", loss_rb)
-        print("对比损失:", loss_cl)
+        # print("训练损失:", loss)
+        # print("重建损失:", loss_rb)
+        # print("对比损失:", loss_cl)
 
         return dec_out, long_term_history, loss
 
     def encoding(self, long_term_history):
-        mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
-        mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
-
-        # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
-        agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
-
-        # 2.x_enc BTD(8,48,7)
         batch_size, num_nodes, _, _ = long_term_history.shape
 
-        patches_reshaped = patches.reshape(batch_size * num_nodes, patches.shape[2], patches.shape[3])  # [(bs * n_vars) x seq_len x d_model]
+        mid_patches = self.patch_embedding(long_term_history)
+        mid_patches = mid_patches.transpose(-1, -2)
 
-        # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
-        p_enc_out = self.encoder_new(patches_reshaped)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
+        agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)
 
-        # # 9.agg_enc_out(8,7,48,128)
-        _, seq_len, nums_dim = p_enc_out.shape
-        p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
+        patches = self.positional_encoding(agcrn_hidden_states)
+        p_enc_out, _ = self.encoder(patches)
 
-        # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
-        dec_out = self.projection(p_enc_out)  # dec_out: [bs x n_vars x seq_len]
-        dec_out = dec_out.view(batch_size , num_nodes, 1, -1)  # dec_out: [bs x seq_len x n_vars](8,207,24,12)
+        _, _, seq_len, nums_dim = p_enc_out.shape
+        p_enc_out = p_enc_out.permute(0, 1, 3, 2)
+        p_enc_out = p_enc_out.view(batch_size, num_nodes, nums_dim, seq_len, -1)
+
+        dec_out = self.projection(p_enc_out)
+        dec_out = dec_out.permute(0, 1, 3, 2)
+        dec_out = self.fc_patch_size(dec_out)
+        dec_out = dec_out.view(batch_size, num_nodes, 1, -1)
 
         return dec_out
 
