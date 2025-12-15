@@ -24,6 +24,10 @@ class MaskRunner(SimpleTimeSeriesForecastingRunner):
         Returns:
             tuple: (prediction, real_value)
         """
+        history_data_clone = data['inputs'].clone().detach()
+        history_data_clone = history_data_clone.permute(0, 2, 3, 1)
+        history_data_clone = history_data_clone[:,:,self.forward_features,:]
+
 
         data = self.preprocessing(data)
         # Preprocess input data
@@ -34,13 +38,14 @@ class MaskRunner(SimpleTimeSeriesForecastingRunner):
 
         # Select input features
         history_data = self.select_input_features(history_data)
-
         # feed forward
         reconstruction_masked_tokens, label_masked_tokens, loss_all = self.model(history_data=history_data,future_data=None, batch_seen=iter_num,
                                                                                  epoch=epoch)
-        results = {'prediction': reconstruction_masked_tokens, 'target': label_masked_tokens, 'inputs': history_data, 'loss_all': loss_all}
+        results = {'prediction': reconstruction_masked_tokens,  'inputs': history_data, 'loss_all': loss_all}
 
         results = self.postprocessing(results)
+        history_data_clone = self.to_running_device(history_data_clone)
+        results['target'] =  history_data_clone
         return results
 
     @torch.no_grad()

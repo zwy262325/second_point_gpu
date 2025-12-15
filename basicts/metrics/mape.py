@@ -29,6 +29,15 @@ def masked_mape(prediction: torch.Tensor, target: torch.Tensor, null_val: float 
         - The final mask is the intersection of `zero_mask` and `null_mask`, ensuring that only valid, non-zero,
           and non-null values contribute to the MAPE calculation.
     """
+    # 简单打印输入信息
+    print(f"[MAPE] 输入 - pred: {prediction.shape}, target: {target.shape}")
+    print(f"       pred范围: [{prediction.min().item():.4f}, {prediction.max().item():.4f}]")
+    print(f"       target范围: [{target.min().item():.4f}, {target.max().item():.4f}]")
+
+    if target.numel() <= 100:  # 如果元素不多，打印具体值
+        print(f"       target值 (前20个): {target.flatten()[:20]}")
+        print(f"       pred值 (前20个): {prediction.flatten()[:20]}")
+
 
     # mask to exclude zero values in the target
     zero_mask = ~torch.isclose(target, torch.tensor(0.0).to(target.device), atol=5e-5)
@@ -49,5 +58,7 @@ def masked_mape(prediction: torch.Tensor, target: torch.Tensor, null_val: float 
     loss = torch.abs((prediction - target) / target)
     loss *= mask
     loss = torch.nan_to_num(loss)
+
+    print(f"[MAPE] 结果: {torch.mean(loss):.6f}")
 
     return torch.mean(loss)

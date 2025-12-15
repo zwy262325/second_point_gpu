@@ -29,7 +29,7 @@ class SimpleTimeSeriesForecastingRunner(BaseTimeSeriesForecastingRunner):
         """
 
         if self.scaler is not None:
-            input_data['target'] = self.scaler.transform(input_data['target'])
+            # input_data['target'] = self.scaler.transform(input_data['target'])
             input_data['inputs'] = self.scaler.transform(input_data['inputs'])
         # TODO: add more preprocessing steps as needed.
         return input_data
@@ -47,13 +47,13 @@ class SimpleTimeSeriesForecastingRunner(BaseTimeSeriesForecastingRunner):
         # rescale data
         if self.scaler is not None and self.scaler.rescale:
             input_data['prediction'] = self.scaler.inverse_transform(input_data['prediction'])
-            input_data['target'] = self.scaler.inverse_transform(input_data['target'])
+            # input_data['target'] = self.scaler.inverse_transform(input_data['target'])
             input_data['inputs'] = self.scaler.inverse_transform(input_data['inputs'])
 
-        # subset forecasting
-        if self.target_time_series is not None:
-            input_data['target'] = input_data['target'][:, :, self.target_time_series, :]
-            input_data['prediction'] = input_data['prediction'][:, :, self.target_time_series, :]
+        # # subset forecasting
+        # if self.target_time_series is not None:
+        #     input_data['target'] = input_data['target'][:, :, self.target_time_series, :]
+        #     input_data['prediction'] = input_data['prediction'][:, :, self.target_time_series, :]
 
         # TODO: add more postprocessing steps as needed.
         return input_data
