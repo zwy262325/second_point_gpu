@@ -4,6 +4,7 @@ __pycache__/
 #checkpoints/
 #datasets/
 todo.md
+.idea
 #gpu_task.py
 #cmd.sh
 
