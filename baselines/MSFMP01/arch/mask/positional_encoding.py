@@ -25,5 +25,5 @@ class PositionalEncoding(nn.Module):
         tp_enc_2d = PositionalEncoding2D(num_feat)
         # input_data = input_data.to(torch.device('cpu'))
         input_data+= tp_enc_2d(input_data)
-        return input_data.to('cuda:0')
+        return input_data.to(input_data.device)
         # return input_data

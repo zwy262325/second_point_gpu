@@ -72,9 +72,7 @@ class GraphWaveNet(nn.Module):
         self.gconv = nn.ModuleList()
 
         #新加
-        self.fc_his_t = nn.Sequential(nn.Linear(96, 512), nn.ReLU(), nn.Linear(512, 256), nn.ReLU())
-        # 1.删除空间维度变化
-        # self.fc_his_s = nn.Sequential(nn.Linear(96, 512), nn.ReLU(), nn.Linear(512, 256), nn.ReLU())
+        self.fc_his_t = nn.Sequential(nn.Linear(1, 96), nn.ReLU(), nn.Linear(96, 512), nn.ReLU(),nn.Linear(512, 256), nn.ReLU())
 
 
         self.start_conv = nn.Conv2d(in_channels=in_dim, out_channels=residual_channels, kernel_size=(1,1))
@@ -208,13 +206,9 @@ class GraphWaveNet(nn.Module):
 
             x = self.bn[i](x)
 
-        hidden_states_t = self.fc_his_t(hidden_states)        # B, N, D
+        hidden_states_t = self.fc_his_t(hidden_states)  # B, N, D
         hidden_states_t = hidden_states_t.transpose(1, 2).unsqueeze(-1)
         skip = skip + hidden_states_t
-        #2. 删除空间特征维度变化
-        # hidden_states_s = self.fc_his_s(hidden_states[:,:,96:])        # B, N, D
-        # hidden_states_s = hidden_states_s.transpose(1, 2).unsqueeze(-1)
-        # skip = skip + hidden_states_s
         
         x = F.relu(skip)
         x = F.relu(self.end_conv_1(x))

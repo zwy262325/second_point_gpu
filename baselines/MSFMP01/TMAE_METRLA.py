@@ -4,7 +4,7 @@ from easydict import EasyDict
 sys.path.append(os.path.abspath(__file__ + '/../../..'))
 
 from basicts.metrics import masked_mae, masked_mape, masked_rmse
-from .arch.mask.mae_loss import mae_loss_cl
+from .arch.mask.mse_cl_loss import mse_cl_loss
 from basicts.scaler import ZScoreScaler
 from basicts.data import TimeSeriesForecastingDataset
 from basicts.utils import get_regular_settings
@@ -17,7 +17,7 @@ from .runner import MaskRunner
 DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
-INPUT_LEN = 288 * 3
+INPUT_LEN = 96
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -26,7 +26,7 @@ NULL_VAL = regular_settings['NULL_VAL'] # Null value in the data
 # Model architecture and parameters
 MODEL_ARCH = Mask
 MODEL_PARAM = {
-    "patch_size":12,
+    "patch_size": 2,
     "in_channel":1,
     "embed_dim":32,
     "num_heads":4,
@@ -41,7 +41,24 @@ MODEL_PARAM = {
     "agcn_embed_dim": 10,
     "cheb_k": 2,
     "num_node": 207,
-    "input_len": INPUT_LEN // 12,
+    "input_len": INPUT_LEN // 2,
+    "simMTM_args":{
+        "mask_distribution": 'geometric',
+        "lm" : 3,
+        "positive_nums": 3,
+        "temperature": 0.2,
+        "compression_ratio":0.1
+    },
+    "transformer_args": {
+        "factor": 1,
+        "dropout": 0.1,
+        "output_attention": False,
+        "d_model": 32,
+        "n_heads": 4,
+        "d_ff": 256,
+        "activation": 'gelu',
+        "e_layers": 1,
+    }
 }
 NUM_EPOCHS = 100
 
@@ -80,7 +97,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_MSFMP01'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_MSFMP01_04'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0]
@@ -105,12 +122,12 @@ CFG.TRAIN.CKPT_SAVE_DIR = os.path.join(
     CFG.MODEL.NAME,
     '_'.join([DATA_NAME, str(CFG.TRAIN.NUM_EPOCHS), str(INPUT_LEN), str(OUTPUT_LEN)])
 )
-CFG.TRAIN.LOSS = mae_loss_cl
+CFG.TRAIN.LOSS = mse_cl_loss
 # Optimizer settings
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
 CFG.TRAIN.OPTIM.PARAM = {
-    "lr":0.001,
+    "lr":0.00001,
     "weight_decay":0,
     "eps":1.0e-8,
     "betas":(0.9, 0.95)
@@ -124,12 +141,12 @@ CFG.TRAIN.LR_SCHEDULER.PARAM = {
 }
 # Train data loader settings
 CFG.TRAIN.DATA = EasyDict()
-CFG.TRAIN.DATA.BATCH_SIZE = 8
+CFG.TRAIN.DATA.BATCH_SIZE = 16
 CFG.TRAIN.DATA.SHUFFLE = True
-CFG.TRAIN.DATA.NUM_WORKERS = 2
+CFG.TRAIN.DATA.NUM_WORKERS = 16
 CFG.TRAIN.DATA.PIN_MEMORY = True
 CFG.TRAIN.CLIP_GRAD_PARAM = {
-    "max_norm": 5.0
+    "max_norm": 2.0
 }
 CFG.TRAIN.EARLY_STOPPING_PATIENCE = 20
 
@@ -137,16 +154,16 @@ CFG.TRAIN.EARLY_STOPPING_PATIENCE = 20
 CFG.VAL = EasyDict()
 CFG.VAL.INTERVAL = 1
 CFG.VAL.DATA = EasyDict()
-CFG.VAL.DATA.BATCH_SIZE = 8
-CFG.VAL.DATA.NUM_WORKERS = 2
+CFG.VAL.DATA.BATCH_SIZE = 16
+CFG.VAL.DATA.NUM_WORKERS = 16
 CFG.VAL.DATA.PIN_MEMORY = True
 
 ############################## Test Configuration ##############################
 CFG.TEST = EasyDict()
 CFG.TEST.INTERVAL = 1
 CFG.TEST.DATA = EasyDict()
-CFG.TEST.DATA.BATCH_SIZE = 8
-CFG.TEST.DATA.NUM_WORKERS = 2
+CFG.TEST.DATA.BATCH_SIZE = 16
+CFG.TEST.DATA.NUM_WORKERS = 16
 CFG.TEST.DATA.PIN_MEMORY = True
 
 ############################## Evaluation Configuration ##############################
