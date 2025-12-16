@@ -37,6 +37,8 @@ class MaskRunner(SimpleTimeSeriesForecastingRunner):
 
         # feed forward
         reconstruction_masked_tokens, label_masked_tokens, loss_cl = self.model(history_data=history_data, future_data=None, batch_seen=iter_num, epoch=epoch)
+        reconstruction_masked_tokens = reconstruction_masked_tokens.permute(0, 3, 1, 2)
+        label_masked_tokens = label_masked_tokens.permute(0, 3, 1, 2)
         results = {'prediction': reconstruction_masked_tokens, 'target': label_masked_tokens, 'inputs': history_data, 'loss_cl': loss_cl, 'awl_module': self.awl_module, 'scaler': self.scaler}
         results = self.postprocessing(results)
         return results

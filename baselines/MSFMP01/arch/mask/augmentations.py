@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import math
 
-from numpy.lib.twodim_base import mask_indices
+
 
 
 def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geometric'):
