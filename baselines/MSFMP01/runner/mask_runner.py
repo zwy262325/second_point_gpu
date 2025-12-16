@@ -35,8 +35,8 @@ class MaskRunner(SimpleTimeSeriesForecastingRunner):
         history_data = self.select_input_features(history_data)
         # feed forward
         reconstruction_masked_tokens, label_masked_tokens, loss_all = self.model(history_data=history_data,future_data=None, batch_seen=iter_num,epoch=epoch)
-        reconstruction_masked_tokens = reconstruction_masked_tokens.permute(0, 3, 1, 2)
-        label_masked_tokens = label_masked_tokens.permute(0, 3, 1, 2)
+        # reconstruction_masked_tokens = reconstruction_masked_tokens.permute(0, 3, 1, 2)
+        # label_masked_tokens = label_masked_tokens.permute(0, 3, 1, 2)
         results = {'prediction': reconstruction_masked_tokens, 'target':label_masked_tokens,'inputs': history_data, 'loss_all': loss_all}
 
         results = self.postprocessing(results)

@@ -44,8 +44,8 @@ class Flatten_Head(nn.Module):
     def __init__(self, seq_len, d_model, pred_len, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
-        # self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
-        self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
+        self.linear = nn.Linear(seq_len*d_model, pred_len) # 使用通道
+        # self.linear = nn.Linear(seq_len, pred_len) # 不使用通道
         self.dropout = nn.Dropout(head_dropout)
 
     def forward(self, x):  # [bs x n_vars x seq_len x d_model]
@@ -106,7 +106,7 @@ class Mask(nn.Module):
         # 新加
         self.fc_patch_size = nn.Sequential(nn.Linear(self.embed_dim, patch_size))
         # Embedding
-        # self.enc_embedding = DataEmbedding(1, 96)
+        self.enc_embedding = DataEmbedding(1, 32)
 
         self.node_embeddings = nn.Parameter(torch.randn(num_node, agcn_embed_dim), requires_grad=True)
         self.AVWGCN = AVWGCN(dim_in, dim_out, cheb_k, agcn_embed_dim)
@@ -117,13 +117,15 @@ class Mask(nn.Module):
     def encoding_decoding(self, long_term_history):
         batch_size, num_nodes, _, _ = long_term_history.shape
 
-        mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
-        mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
-        agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
+        # mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
+        # mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
+        # agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
+        # patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
+
+        long_term_history = long_term_history.permute(0, 1, 3, 2)
 
         # 1.生成多个掩蔽副本/掩蔽矩阵 并与原始序列拼接 batch_x_om_3d(6624,72,96) B * (positive_num + 1)DT, mask_om_3d(6624,72,96)
-        x_enc, mask_index = self.masked_data(patches, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
+        x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
 
         x_enc = x_enc.float()
         mask_index = mask_index.float()
@@ -159,16 +161,16 @@ class Mask(nn.Module):
 
         bs, node, seq_len, n_vars = x_enc.shape
 
-        # # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
-        # x_enc = x_enc.permute(0, 3, 1, 2)
-        # x_enc = x_enc.unsqueeze(-1)
-        # x_enc = x_enc.reshape(-1, node, seq_len, 1)
-        #
-        # # 特征维度转换
-        # enc_out = self.enc_embedding(x_enc)
+        # 通道独立处理x_enc(56,48,1) 批次和特征相乘,48为时间步长
+        x_enc = x_enc.permute(0, 3, 1, 2)
+        x_enc = x_enc.unsqueeze(-1)
+        x_enc = x_enc.reshape(-1, node, seq_len, 1)
 
-        # p_enc_out, _ = self.encoder(enc_out) # 使用通道
-        p_enc_out, _ = self.encoder(x_enc) # 不使用通道
+        # 特征维度转换
+        enc_out = self.enc_embedding(x_enc)
+
+        p_enc_out, _ = self.encoder(enc_out) # 使用通道
+        # p_enc_out, _ = self.encoder(x_enc) # 不使用通道
         # p_enc_out = self.encoder_new(x_enc)
 
         # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
@@ -189,11 +191,11 @@ class Mask(nn.Module):
         dec_out = dec_out.permute(0, 1, 3, 2)
 
         # # 逆标准化dec_out(8,48,7),将重建的序列还原到原始数据的尺度
-        # dec_out = dec_out * (stdev[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
-        # dec_out = dec_out + (means[:, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
+        # dec_out = dec_out * (stdev[:, :, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
+        # dec_out = dec_out + (means[:, :, 0, :].unsqueeze(2).repeat(1, 1, self.input_len, 1))
 
-        dec_out = self.fc_patch_size(dec_out)
-        dec_out = dec_out.view(batch_size * (self.positive_nums + 1), num_nodes, 1, -1)
+        # dec_out = self.fc_patch_size(dec_out)
+        # dec_out = dec_out.view(batch_size * (self.positive_nums + 1), num_nodes, 1, -1)
 
         dec_out = dec_out[:batch_size]
 
