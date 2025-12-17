@@ -20,7 +20,7 @@ DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
 #原INPUT_LEN = 288 *3
-INPUT_LEN = 288 * 3
+INPUT_LEN = 288
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -31,11 +31,11 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/Mask_TMAE_MSFMP01_best_val_loss.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v7.pt",
     "mask_args": {
                     "patch_size":12,
                     "in_channel":1,
-                    "embed_dim":32,
+                    "embed_dim":96,
                     "num_heads":4,
                     "mlp_ratio":4,
                     "dropout":0.1,
@@ -43,8 +43,8 @@ MODEL_PARAM = {
                     "encoder_depth":4,
                     "decoder_depth":1,
                     "mode":"forecasting",
-                    "dim_in": 32,
-                    "dim_out": 32,
+                    "dim_in": 96,
+                    "dim_out": 96,
                     "agcn_embed_dim": 10,
                     "cheb_k": 2,
                     "num_node": 207,
@@ -75,7 +75,7 @@ NUM_EPOCHS = 200
 CFG = EasyDict()
 # General settings
 CFG.DESCRIPTION = 'An Example Config'
-CFG.GPU_NUM = 0 # Number of GPUs to use (0 for CPU mode)
+CFG.GPU_NUM = 1 # Number of GPUs to use (0 for CPU mode)
 # Runner
 CFG.RUNNER = SimpleTimeSeriesForecastingRunner
 
@@ -106,7 +106,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_forcast_v7'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]
@@ -151,9 +151,9 @@ CFG.TRAIN.LR_SCHEDULER.PARAM = {
 }
 # Train data loader settings
 CFG.TRAIN.DATA = EasyDict()
-CFG.TRAIN.DATA.BATCH_SIZE = 8
+CFG.TRAIN.DATA.BATCH_SIZE = 16
 CFG.TRAIN.DATA.SHUFFLE = True
-CFG.TRAIN.DATA.NUM_WORKERS = 2
+CFG.TRAIN.DATA.NUM_WORKERS = 16
 CFG.TRAIN.DATA.PIN_MEMORY = True
 CFG.TRAIN.CLIP_GRAD_PARAM = {
     "max_norm": 3.0
@@ -169,16 +169,16 @@ CFG.TRAIN.EARLY_STOPPING_PATIENCE = 15
 CFG.VAL = EasyDict()
 CFG.VAL.INTERVAL = 1
 CFG.VAL.DATA = EasyDict()
-CFG.VAL.DATA.BATCH_SIZE = 8
-CFG.VAL.DATA.NUM_WORKERS = 2
+CFG.VAL.DATA.BATCH_SIZE = 16
+CFG.VAL.DATA.NUM_WORKERS = 16
 CFG.VAL.DATA.PIN_MEMORY = True
 
 ############################## Test Configuration ##############################
 CFG.TEST = EasyDict()
 CFG.TEST.INTERVAL = 1
 CFG.TEST.DATA = EasyDict()
-CFG.TEST.DATA.BATCH_SIZE = 8
-CFG.TEST.DATA.NUM_WORKERS = 2
+CFG.TEST.DATA.BATCH_SIZE = 16
+CFG.TEST.DATA.NUM_WORKERS = 16
 CFG.TEST.DATA.PIN_MEMORY = True
 
 ############################## Evaluation Configuration ##############################
@@ -187,4 +187,4 @@ CFG.EVAL = EasyDict()
 
 # Evaluation parameters
 CFG.EVAL.HORIZONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] # Prediction horizons for evaluation. Default: []
-CFG.EVAL.USE_GPU = False # Whether to use GPU for evaluation. Default: True
+CFG.EVAL.USE_GPU = True # Whether to use GPU for evaluation. Default: True
