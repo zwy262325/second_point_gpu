@@ -17,7 +17,7 @@ from .runner import MaskRunner
 DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
-INPUT_LEN = 288 * 3
+INPUT_LEN = 288
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -110,7 +110,7 @@ CFG.TRAIN.LOSS = mae_loss_cl
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
 CFG.TRAIN.OPTIM.PARAM = {
-    "lr":0.001,
+    "lr":0.0001,
     "weight_decay":0,
     "eps":1.0e-8,
     "betas":(0.9, 0.95)
@@ -124,12 +124,12 @@ CFG.TRAIN.LR_SCHEDULER.PARAM = {
 }
 # Train data loader settings
 CFG.TRAIN.DATA = EasyDict()
-CFG.TRAIN.DATA.BATCH_SIZE = 8
+CFG.TRAIN.DATA.BATCH_SIZE = 4
 CFG.TRAIN.DATA.SHUFFLE = True
 CFG.TRAIN.DATA.NUM_WORKERS = 2
 CFG.TRAIN.DATA.PIN_MEMORY = True
 CFG.TRAIN.CLIP_GRAD_PARAM = {
-    "max_norm": 5.0
+    "max_norm": 2.0
 }
 CFG.TRAIN.EARLY_STOPPING_PATIENCE = 20
 
@@ -137,7 +137,7 @@ CFG.TRAIN.EARLY_STOPPING_PATIENCE = 20
 CFG.VAL = EasyDict()
 CFG.VAL.INTERVAL = 1
 CFG.VAL.DATA = EasyDict()
-CFG.VAL.DATA.BATCH_SIZE = 8
+CFG.VAL.DATA.BATCH_SIZE = 4
 CFG.VAL.DATA.NUM_WORKERS = 2
 CFG.VAL.DATA.PIN_MEMORY = True
 
@@ -145,7 +145,7 @@ CFG.VAL.DATA.PIN_MEMORY = True
 CFG.TEST = EasyDict()
 CFG.TEST.INTERVAL = 1
 CFG.TEST.DATA = EasyDict()
-CFG.TEST.DATA.BATCH_SIZE = 8
+CFG.TEST.DATA.BATCH_SIZE = 4
 CFG.TEST.DATA.NUM_WORKERS = 2
 CFG.TEST.DATA.PIN_MEMORY = True
 
