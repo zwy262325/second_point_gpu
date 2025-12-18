@@ -27,7 +27,7 @@ NULL_VAL = regular_settings['NULL_VAL'] # Null value in the data
 MODEL_ARCH = Mask
 MODEL_PARAM = {
     "patch_size":12,
-    "in_channel":1,
+    "in_channel":3,
     "embed_dim":32,
     "num_heads":4,
     "mlp_ratio":4,
@@ -83,7 +83,7 @@ CFG.MODEL = EasyDict()
 CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_MSFMP01'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
-CFG.MODEL.FORWARD_FEATURES = [0]
+CFG.MODEL.FORWARD_FEATURES = [0,1,2]
 CFG.MODEL.TARGET_FEATURES = [0]
 
 ############################## Metrics Configuration ##############################

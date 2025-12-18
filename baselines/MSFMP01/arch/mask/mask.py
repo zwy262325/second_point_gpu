@@ -123,7 +123,7 @@ class Mask(nn.Module):
         # 13.总体损失计算
         # loss = self.awl(loss_cl, loss_rb)
 
-        return dec_out, long_term_history, loss_cl
+        return dec_out, long_term_history[:, :, 0:1, :], loss_cl
 
     def encoding(self, long_term_history):
         mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
