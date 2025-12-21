@@ -137,23 +137,29 @@ class Mask(nn.Module):
         return dec_out, long_term_history, loss_cl
 
     def encoding(self, long_term_history):
-        mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
-        mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
+        # mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
+        # mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
+        #
+        # # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
+        # agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
+        # patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
 
-        # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
-        agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
+        long_term_history = long_term_history.permute(0, 2, 1, 3)
 
         # 2.x_enc BTD(8,48,7)
-        batch_size, num_nodes, _, _ = long_term_history.shape
+        batch_size, num_nodes, seq_len, _ = long_term_history.shape
 
-        patches_reshaped = patches.reshape(batch_size * num_nodes, patches.shape[2], patches.shape[3])  # [(bs * n_vars) x seq_len x d_model]
+        x_enc = long_term_history.reshape(batch_size * num_nodes, long_term_history.shape[2], long_term_history.shape[3])  # [(bs * n_vars) x seq_len x d_model]
+
+        x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
+        x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
+        enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
 
         # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
-        p_enc_out = self.encoder_new(patches_reshaped)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
+        p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
 
         # # 9.agg_enc_out(8,7,48,128)
-        _, seq_len, nums_dim = p_enc_out.shape
+        _, _, nums_dim = p_enc_out.shape
         p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
 
         # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
