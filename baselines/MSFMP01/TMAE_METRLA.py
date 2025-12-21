@@ -17,7 +17,7 @@ from .runner import MaskRunner
 DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
-INPUT_LEN = 288
+INPUT_LEN = 96
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -27,7 +27,7 @@ NULL_VAL = regular_settings['NULL_VAL'] # Null value in the data
 MODEL_ARCH = Mask
 MODEL_PARAM = {
     "patch_size":12,
-    "in_channel":3,
+    "in_channel":1,
     "embed_dim":32,
     "num_heads":4,
     "mlp_ratio":4,
@@ -41,7 +41,7 @@ MODEL_PARAM = {
     "agcn_embed_dim": 10,
     "cheb_k": 2,
     "num_node": 207,
-    "input_len": INPUT_LEN // 12,
+    "input_len": INPUT_LEN
 }
 NUM_EPOCHS = 100
 
@@ -80,10 +80,10 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_MSFMP01'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_MSFMP01_noP_noA'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
-CFG.MODEL.FORWARD_FEATURES = [0,1,2]
+CFG.MODEL.FORWARD_FEATURES = [0]
 CFG.MODEL.TARGET_FEATURES = [0]
 
 ############################## Metrics Configuration ##############################
@@ -126,7 +126,7 @@ CFG.TRAIN.LR_SCHEDULER.PARAM = {
 CFG.TRAIN.DATA = EasyDict()
 CFG.TRAIN.DATA.BATCH_SIZE = 4
 CFG.TRAIN.DATA.SHUFFLE = True
-CFG.TRAIN.DATA.NUM_WORKERS = 2
+CFG.TRAIN.DATA.NUM_WORKERS = 4
 CFG.TRAIN.DATA.PIN_MEMORY = True
 CFG.TRAIN.CLIP_GRAD_PARAM = {
     "max_norm": 2.0
@@ -138,7 +138,7 @@ CFG.VAL = EasyDict()
 CFG.VAL.INTERVAL = 1
 CFG.VAL.DATA = EasyDict()
 CFG.VAL.DATA.BATCH_SIZE = 4
-CFG.VAL.DATA.NUM_WORKERS = 2
+CFG.VAL.DATA.NUM_WORKERS = 4
 CFG.VAL.DATA.PIN_MEMORY = True
 
 ############################## Test Configuration ##############################
@@ -146,7 +146,7 @@ CFG.TEST = EasyDict()
 CFG.TEST.INTERVAL = 1
 CFG.TEST.DATA = EasyDict()
 CFG.TEST.DATA.BATCH_SIZE = 4
-CFG.TEST.DATA.NUM_WORKERS = 2
+CFG.TEST.DATA.NUM_WORKERS = 4
 CFG.TEST.DATA.PIN_MEMORY = True
 
 ############################## Evaluation Configuration ##############################
