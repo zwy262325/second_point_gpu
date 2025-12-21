@@ -75,104 +75,44 @@ class Mask(nn.Module):
         self.aggregation = AggregationRebuild(temperature, positive_nums)
         self.projection = Flatten_Head(input_len, embed_dim, input_len, head_dropout=dropout)
 
-
-        #self.node_embeddings = nn.Parameter(torch.randn(num_node, agcn_embed_dim), requires_grad=True)
-        #self.AVWGCN = AVWGCN(dim_in, dim_out, cheb_k, agcn_embed_dim)
-        #self.patch_embedding = PatchEmbedding(patch_size, in_channel, embed_dim, norm_layer=None)
-        #self.positional_encoding = PositionalEncoding()
-
     def encoding_decoding(self, long_term_history):
-        # mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
-        # mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
-        #
-        # # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
-        # agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        # patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
-        long_term_history = long_term_history.permute(0, 2, 1, 3)
-        # 1.生成多个掩蔽副本/掩蔽矩阵 并与原始序列拼接 batch_x_om_3d(6624,72,96) B * (positive_num + 1)DT, mask_om_3d(6624,72,96)
-        x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
 
-        # 2.x_enc BTD(8,48,7)
+        long_term_history = long_term_history.permute(0, 2, 1, 3)
+        x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
         batch_size, num_nodes,_, _ = long_term_history.shape
         bs, seq_len, n_vars = x_enc.shape
-
-        # channel independent
         x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
         x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
         enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
-
-        # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
         p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
-
-        # 6.序列特征提取 series-wise representation s_enc_out(56,128) 使用MLP将48个时间步的信息压缩到一个固定长度的向量中
         s_enc_out = self.pooler(p_enc_out)  # s_enc_out: [(bs * n_vars) x dimension]
-
-        # 7.对比学习(序列相似度计算+对比损失计算)
-        # loss_cl KL散度的损失值,惩罚和奖励 similarity_matrix(56,56)相似度矩阵 logits(56,55)合并正负样本相似度 positives_mask(56,56)正样本掩码
         loss_cl, similarity_matrix, logits, positives_mask = self.contrastive(s_enc_out)  # similarity_matrix: [(bs * n_vars) x (bs * n_vars)]
-
-        # 8.节点聚合(基于相似度矩阵对节点特征进行加权平均,每个样本用其他样本特征增强自己)
-        # 重建权重矩阵(56,56)  加强后的序列agg_enc_out(56,48,128)
         rebuild_weight_matrix, agg_enc_out = self.aggregation(similarity_matrix, p_enc_out)  # agg_enc_out: [(bs * n_vars) x seq_len x d_model]
-
-        # # 9.agg_enc_out(8,7,48,128)
         _, seq_len, nums_dim = agg_enc_out.shape
         agg_enc_out = agg_enc_out.reshape(batch_size * (self.positive_nums + 1), num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
-
-        # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
         dec_out = self.projection(agg_enc_out)  # dec_out: [bs x n_vars x seq_len]
         dec_out = dec_out.view(batch_size * (self.positive_nums + 1), num_nodes, 1, -1) # dec_out: [bs x seq_len x n_vars](8,207,24,12)
-
-        # 11.从重建的8个样本中，取出前2个pred_batch_x (2,48,7)
         dec_out = dec_out[:batch_size]
-
         dec_out = dec_out.permute(0, 1, 3, 2)
-
-        # 12.重建损失计算
-        # loss_rb = self.mse(pred_batch_x, patches.detach())
-
-        # 13.总体损失计算
-        # loss = self.awl(loss_cl, loss_rb)
-
         return dec_out, long_term_history, loss_cl
 
     def encoding(self, long_term_history):
-        # mid_patches = self.patch_embedding(long_term_history)  # B, N, d, P (8,207,1,864)
-        # mid_patches = mid_patches.transpose(-1, -2)  # B, N, P, d (8,207,72,96)
-        #
-        # # batch_size, num_nodes, num_time, num_dim = mid_patches.shape
-        # agcrn_hidden_states = self.AVWGCN(mid_patches, self.node_embeddings)  # (8,207,72,96)
-        # patches = self.positional_encoding(agcrn_hidden_states)  # BNTD(8,207,72,96)
-
         long_term_history = long_term_history.permute(0, 2, 1, 3)
-
-        # 2.x_enc BTD(8,48,7)
         batch_size, num_nodes, seq_len, _ = long_term_history.shape
-
         x_enc = long_term_history.reshape(batch_size * num_nodes, long_term_history.shape[2], long_term_history.shape[3])  # [(bs * n_vars) x seq_len x d_model]
-
         x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
         x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
         enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
-
-        # 5.节点特征提取 encoder point-wise representation p_enc_out(56,48,128) 使用Transformer
         p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
-
-        # # 9.agg_enc_out(8,7,48,128)
         _, _, nums_dim = p_enc_out.shape
         p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
+        # dec_out = self.projection(p_enc_out)  # dec_out: [bs x n_vars x seq_len]
+        # dec_out = dec_out.view(batch_size , num_nodes, 1, -1)  # dec_out: [bs x seq_len x n_vars](8,207,24,12)
 
-        # 10.序列重建 decoder dec_out(8,7,48) agg_enc_out.permute(0,3,2,1)(8,128,48,7)
-        dec_out = self.projection(p_enc_out)  # dec_out: [bs x n_vars x seq_len]
-        dec_out = dec_out.view(batch_size , num_nodes, 1, -1)  # dec_out: [bs x seq_len x n_vars](8,207,24,12)
-
-        return dec_out
+        return p_enc_out
 
     def forward(self, history_data: torch.Tensor, future_data: torch.Tensor = None, batch_seen: int = None,
                 epoch: int = None, **kwargs) -> torch.Tensor:
-        # reshape
-        #history_data = history_data.permute(0, 2, 3, 1)  # B, N, 1, L * P
-        # feed forward
         if self.mode == "pre-train":
             predict_result, original_result, loss_cl = self.encoding_decoding(history_data)
             return predict_result, original_result, loss_cl

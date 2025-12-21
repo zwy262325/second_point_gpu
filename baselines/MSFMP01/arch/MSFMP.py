@@ -78,12 +78,12 @@ class MSFMP(nn.Module):
 
         # hidden_states_t(8,207,72,96)
         hidden_states_t = self.tmae(long_history_data[..., [0]])
-        hidden_states = hidden_states_t.transpose(2, 3)
+        # hidden_states = hidden_states_t.transpose(2, 3)
 
         # enhance
         out_len = 1
         # hidden_states(8,207,96)
-        hidden_states = hidden_states[:, :, -out_len, :]
+        hidden_states = hidden_states_t[:, :, -out_len, :]
         y_hat = self.backend(short_term_history, hidden_states=hidden_states).transpose(1, 2).unsqueeze(-1)
 
         return y_hat

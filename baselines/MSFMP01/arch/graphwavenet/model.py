@@ -72,7 +72,7 @@ class GraphWaveNet(nn.Module):
         self.gconv = nn.ModuleList()
 
         #新加
-        self.fc_his_t = nn.Sequential(nn.Linear(1, 96), nn.ReLU(), nn.Linear(96, 512), nn.ReLU(),nn.Linear(512, 256), nn.ReLU())
+        self.fc_his_t = nn.Sequential(nn.Linear(32, 96), nn.ReLU(), nn.Linear(96, 512), nn.ReLU(),nn.Linear(512, 256), nn.ReLU())
 
 
         self.start_conv = nn.Conv2d(in_channels=in_dim, out_channels=residual_channels, kernel_size=(1,1))
