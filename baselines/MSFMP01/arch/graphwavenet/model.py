@@ -127,6 +127,26 @@ class GraphWaveNet(nn.Module):
 
         self.receptive_field = receptive_field
 
+        # ========== 新增：双向交叉注意力层（适配(B,D,N,1)维度） ==========
+        # 注意力层输入维度：embed_dim=skip_channels（D），序列长度=num_nodes（N）
+        self.cross_attention = nn.MultiheadAttention(
+            embed_dim=skip_channels,  # EmbedDim=D
+            num_heads=8,  # 可根据需求调整头数，需满足D能被头数整除
+            dropout=dropout,
+            batch_first=True  # 输入形状：[B, SeqLen, EmbedDim]
+        )
+        # 可选：融合双向注意力结果的线性层（保持维度不变）
+        self.fusion_linear = nn.Sequential(
+            nn.Linear(2 * skip_channels, skip_channels),
+            nn.ReLU()
+        )
+
+        # 可选：融合双向注意力结果的线性层（保持维度不变）
+        self.fusion_linear = nn.Sequential(
+            nn.Linear(2 * skip_channels, skip_channels),
+            nn.ReLU()
+        )
+
 
 
     def forward(self, input, hidden_states):
@@ -206,9 +226,31 @@ class GraphWaveNet(nn.Module):
 
             x = self.bn[i](x)
 
-        hidden_states_t = self.fc_his_t(hidden_states)  # B, N, D
-        hidden_states_t = hidden_states_t.transpose(1, 2).unsqueeze(-1)
-        skip = skip + hidden_states_t
+        # hidden_states_t = self.fc_his_t(hidden_states)  # B, N, D
+        # hidden_states_t = hidden_states_t.transpose(1, 2).unsqueeze(-1)
+        # skip = skip + hidden_states_t
+
+        # ========== 核心修改：基于(B,D,N,1)维度的双向交叉注意力融合 ==========
+        hidden_states_t = self.fc_his_t(hidden_states)
+        skip_att = skip.squeeze(-1).permute(0, 2, 1)
+
+        attn_skip, _ = self.cross_attention(
+            query=skip_att,
+            key=hidden_states_t,
+            value=hidden_states_t
+        )
+
+        attn_h_t, _ = self.cross_attention(
+            query=hidden_states_t,
+            key=skip_att,
+            value=skip_att
+        )  # [B, N, D]
+
+        # 3. 双向结果融合（拼接+线性层，或直接相加）
+        attn_fused = torch.cat([attn_skip, attn_h_t], dim=-1)  # [B, N, 2D]
+        attn_fused = self.fusion_linear(attn_fused)  # [B, N, D]
+        skip_fused = attn_fused.permute(0, 2, 1).unsqueeze(-1)
+        skip = skip_fused
         
         x = F.relu(skip)
         x = F.relu(self.end_conv_1(x))
