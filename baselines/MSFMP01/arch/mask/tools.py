@@ -1,7 +1,11 @@
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from scripts.data_preparation.CA.generate_training_data import feature_description
+
 
 class ContrastiveWeight(nn.Module):
     def __init__(self, temperature, positive_nums):
@@ -116,7 +120,6 @@ class AggregationRebuild(torch.nn.Module):
         return rebuild_weight_matrix, rebuild_oral_batch_emb
 
 
-
 class TokenEmbedding(nn.Module):
     def __init__(self, c_in, d_model):
         super(TokenEmbedding, self).__init__()
@@ -132,13 +135,95 @@ class TokenEmbedding(nn.Module):
         x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
         return x
 
-
 class DataEmbedding(nn.Module):
-    def __init__(self, c_in, d_model, dropout=0.1):
+    def __init__(self, c_in, d_model, input_len,  dropout=0.1):
         super(DataEmbedding, self).__init__()
         self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model)
         self.dropout = nn.Dropout(p=dropout)
+        self.input_len = input_len
+        self.add_time_in_day = "True"
+        self.add_day_in_week = "True"
+        self.minute_size = 288
+        self.weekday_size = 7
+        self.feature_dim = 1
+        if self.add_time_in_day:
+            self.daytime_embedding = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.minute_size, d_model)))  # 一天中不同分钟索引（0-1440）映射到embed_dim维的向量中
+        if self.add_day_in_week:
+            self.weekday_embedding = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.weekday_size, d_model))) # 一周中不同天索引（0-7）映射到embed_dim维的向量中
 
-    def forward(self, x, x_mark=None):
-        x = self.value_embedding(x)
-        return self.dropout(x)
+    def forward(self, x):
+        origin_x = x
+        # feature_x = origin_x[:, :, :self.feature_dim]
+        # feature_x = feature_x.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
+        # feature_x = feature_x.reshape(-1, self.input_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
+        # x = self.value_embedding(feature_x)  # （B,T,N,d） Xdata
+        x = self.value_embedding(origin_x[:, :, :self.feature_dim])
+        if self.add_time_in_day:
+            x += self.daytime_embedding[(origin_x[:, :, self.feature_dim] *self.minute_size).type(torch.LongTensor)]
+        if self.add_day_in_week:
+            x += self.weekday_embedding[(origin_x[:, :, self.feature_dim + 1] *self.weekday_size).type(torch.LongTensor) ]# 输入是的B*T*N的张量
+        x = self.dropout(x)
+        return x
+
+# class TokenEmbedding(nn.Module):
+#     def __init__(self, input_dim, embed_dim, norm_layer=None):
+#         super().__init__()
+#         self.token_embed = nn.Linear(input_dim, embed_dim, bias=True)
+#         self.norm = norm_layer(embed_dim) if norm_layer is not None else nn.Identity()
+#
+#     def forward(self, x):
+#         x = self.token_embed(x)
+#         x = self.norm(x)
+#         return x
+
+
+# class PositionalEncoding(nn.Module):
+#     def __init__(self, embed_dim, max_len=100):
+#         # 这个地方可以不写类名
+#         super(PositionalEncoding, self).__init__()
+#         pe = torch.zeros(max_len, embed_dim).float()  # (M,E)
+#         # 确保在反向传播时不会计算这个矩阵的梯度，因为位置编码是固定的，不需要学习。
+#         pe.require_grad = False
+#
+#         position = torch.arange(0, max_len).float().unsqueeze(1)  # (M,1)
+#         div_term = (torch.arange(0, embed_dim, 2).float() * -(math.log(10000.0) / embed_dim)).exp()  # (E//2,)
+#
+#         pe[:, 0::2] = torch.sin(position * div_term)  # 填充偶数列 (M,E//2)*(E//2,)
+#         pe[:, 1::2] = torch.cos(position * div_term)  # 填充奇数列 (M,E//2)*(E//2,)
+#
+#         pe = pe.unsqueeze(0)  # (1,M,E)
+#         self.register_buffer('pe', pe)  # pe 注册为不需要梯度的缓冲区 不计算梯度
+#
+#     def forward(self, x):
+#         return self.pe[:, :x.size(1)].unsqueeze(2).expand_as(x).detach()
+
+
+# class DataEmbedding(nn.Module):
+#     def __init__(self, feature_dim, embed_dim, drop_out=0.1, add_time_in_day=True, add_day_in_week=True,):
+#         super().__init__()
+#
+#         self.add_time_in_day = add_time_in_day
+#         self.add_day_in_week = add_day_in_week
+#         self.minute_size = 288
+#         self.weekday_size = 7
+#         self.embed_dim = embed_dim
+#         self.feature_dim = feature_dim
+#         self.value_embedding = TokenEmbedding(feature_dim, embed_dim)  # 创建原始数据的转换层
+#         #
+#         # self.position_encoding = PositionalEncoding(embed_dim)  # 创建位置嵌入层
+#         if self.add_time_in_day:
+#             self.daytime_embedding = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.minute_size, embed_dim)))  # 一天中不同分钟索引（0-1440）映射到embed_dim维的向量中
+#         if self.add_day_in_week:
+#             self.weekday_embedding = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.weekday_size, embed_dim)))
+#
+#         self.dropout = nn.Dropout(drop_out)
+#
+#     def forward(self, x):
+#         origin_x = x
+#         x = self.value_embedding(origin_x[ :, :, :self.feature_dim])  # （B,T,N,d） Xdata
+#         if self.add_time_in_day:
+#             x += self.daytime_embedding[(origin_x[:, :, self.feature_dim] *self.minute_size).type(torch.LongTensor)]
+#         if self.add_day_in_week:
+#             x += self.weekday_embedding[(origin_x[:, :, self.feature_dim + 1]*self.weekday_size).type(torch.LongTensor) ]
+#         x = self.dropout(x)
+#         return x

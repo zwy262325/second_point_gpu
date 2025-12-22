@@ -66,7 +66,7 @@ class Mask(nn.Module):
         self.positive_nums = positive_nums # 数据的副本数量
         self.masked_data = masked_data
         # Embedding
-        self.enc_embedding = DataEmbedding(1, 32)
+        self.enc_embedding = DataEmbedding(1, 32, input_len)
         # encoder_new
         self.encoder_new = TransformerLayers(embed_dim, encoder_depth, mlp_ratio, num_heads, dropout)
         # for series-wise representation
@@ -81,8 +81,8 @@ class Mask(nn.Module):
         x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
         batch_size, num_nodes,_, _ = long_term_history.shape
         bs, seq_len, n_vars = x_enc.shape
-        x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
-        x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
+        # x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
+        # x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
         enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
         p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
         s_enc_out = self.pooler(p_enc_out)  # s_enc_out: [(bs * n_vars) x dimension]
@@ -94,7 +94,7 @@ class Mask(nn.Module):
         dec_out = dec_out.view(batch_size * (self.positive_nums + 1), num_nodes, 1, -1) # dec_out: [bs x seq_len x n_vars](8,207,24,12)
         dec_out = dec_out[:batch_size]
         dec_out = dec_out.permute(0, 1, 3, 2)
-        return dec_out, long_term_history, loss_cl
+        return dec_out, long_term_history[:, :, :, 0:1], loss_cl
 
     def encoding(self, long_term_history):
         long_term_history = long_term_history.permute(0, 2, 1, 3)
