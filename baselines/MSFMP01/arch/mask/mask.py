@@ -59,7 +59,6 @@ class Mask(nn.Module):
         self.mode = mode
         self.mlp_ratio = mlp_ratio
 
-
         # 新增：初始化augmentations掩蔽参数、
         self.mask_distribution = mask_distribution  # 掩蔽分布类型
         self.lm = lm  # 几何分布的平均掩蔽长度（仅当distribution='geometric'时使用）
@@ -80,9 +79,6 @@ class Mask(nn.Module):
         long_term_history = long_term_history.permute(0, 2, 1, 3)
         x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
         batch_size, num_nodes,_, _ = long_term_history.shape
-        bs, seq_len, n_vars = x_enc.shape
-        # x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
-        # x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
         enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
         p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
         s_enc_out = self.pooler(p_enc_out)  # s_enc_out: [(bs * n_vars) x dimension]
