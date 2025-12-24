@@ -77,7 +77,7 @@ class MSFMP(nn.Module):
         batch_size, _, num_nodes, _ = history_data.shape
 
         # hidden_states_t(8,207,72,96)
-        hidden_states_t = self.tmae(long_history_data[..., [0]])
+        hidden_states_t = self.tmae(long_history_data)
         # hidden_states = hidden_states_t.transpose(2, 3)
 
         # enhance

@@ -20,7 +20,7 @@ DATA_NAME = 'METR-LA'  # Dataset name
 regular_settings = get_regular_settings(DATA_NAME)
 # INPUT_LEN = regular_settings['INPUT_LEN']  # Length of input sequence
 #原INPUT_LEN = 288 *3
-INPUT_LEN = 96
+INPUT_LEN = 24
 OUTPUT_LEN = regular_settings['OUTPUT_LEN']  # Length of output sequence
 TRAIN_VAL_TEST_RATIO = regular_settings['TRAIN_VAL_TEST_RATIO']  # Train/Validation/Test split ratios
 NORM_EACH_CHANNEL = regular_settings['NORM_EACH_CHANNEL'] # Whether to normalize each channel of the data
@@ -31,7 +31,7 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v9.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v12.pt",
     "mask_args": {
                     "patch_size":12,
                     "in_channel":1,
@@ -106,7 +106,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v9'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v12'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]

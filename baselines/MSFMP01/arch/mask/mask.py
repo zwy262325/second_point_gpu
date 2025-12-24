@@ -100,14 +100,12 @@ class Mask(nn.Module):
         long_term_history = long_term_history.permute(0, 2, 1, 3)
         batch_size, num_nodes, seq_len, _ = long_term_history.shape
         x_enc = long_term_history.reshape(batch_size * num_nodes, long_term_history.shape[2], long_term_history.shape[3])  # [(bs * n_vars) x seq_len x d_model]
-        x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
-        x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
+        # x_enc = x_enc.permute(0, 2, 1)  # x_enc: [bs x n_vars x seq_len]
+        # x_enc = x_enc.reshape(-1, seq_len, 1)  # x_enc: [(bs * n_vars) x seq_len x 1]
         enc_out = self.enc_embedding(x_enc)  # enc_out: [(bs * n_vars) x seq_len x d_model]
         p_enc_out = self.encoder_new(enc_out)  # p_enc_out: [(bs * n_vars) x seq_len x d_model]
         _, _, nums_dim = p_enc_out.shape
         p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)  # agg_enc_out: [bs x n_vars x seq_len x d_model]
-        # dec_out = self.projection(p_enc_out)  # dec_out: [bs x n_vars x seq_len]
-        # dec_out = dec_out.view(batch_size , num_nodes, 1, -1)  # dec_out: [bs x seq_len x n_vars](8,207,24,12)
 
         return p_enc_out
 
