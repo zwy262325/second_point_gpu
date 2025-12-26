@@ -352,45 +352,20 @@ class BaseTimeSeriesForecastingRunner(BaseEpochRunner):
             self.update_epoch_meter(f'train/{metric_name}', metric_item.item())
         return loss
 
-    # def val_iters(self, iter_index: int, data: Union[torch.Tensor, Tuple]):
-    #     """Validation iteration process.
-    #
-    #     Args:
-    #         iter_index (int): Current iteration index.
-    #         data (Union[torch.Tensor, Tuple]): Data provided by DataLoader.
-    #     """
-    #
-    #     forward_return = self.forward(data=data, epoch=None, iter_num=iter_index, train=False)
-    #     loss = self.metric_forward(self.loss, forward_return)
-    #     self.update_epoch_meter('val/loss', loss.item())
-    #
-    #     for metric_name, metric_func in self.metrics.items():
-    #         metric_item = self.metric_forward(metric_func, forward_return)
-    #         self.update_epoch_meter(f'val/{metric_name}', metric_item.item())
-
     def val_iters(self, iter_index: int, data: Union[torch.Tensor, Tuple]):
+        """Validation iteration process.
+
+        Args:
+            iter_index (int): Current iteration index.
+            data (Union[torch.Tensor, Tuple]): Data provided by DataLoader.
         """
-        修改后的验证迭代过程：仅针对 Horizon 3, 6, 12 计算指标。
-        """
+
         forward_return = self.forward(data=data, epoch=None, iter_num=iter_index, train=False)
-
-        target_horizons = [2, 5, 11]
-        val_return = {
-            'prediction': forward_return['prediction'][:, target_horizons, :, :],
-            'target': forward_return['target'][:, target_horizons, :, :]
-        }
-        if torch.sum(torch.abs(val_return['target'] > 1e-5)) == 0:
-            val_return['prediction'] = forward_return['prediction']
-            val_return['target'] = forward_return['target']
-
-        for k, v in forward_return.items():
-            if k not in ['prediction', 'target']:
-                val_return[k] = v
-
-        loss = self.metric_forward(self.loss, val_return)
+        loss = self.metric_forward(self.loss, forward_return)
         self.update_epoch_meter('val/loss', loss.item())
+
         for metric_name, metric_func in self.metrics.items():
-            metric_item = self.metric_forward(metric_func, val_return)
+            metric_item = self.metric_forward(metric_func, forward_return)
             self.update_epoch_meter(f'val/{metric_name}', metric_item.item())
 
 

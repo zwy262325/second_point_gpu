@@ -26,22 +26,19 @@ NULL_VAL = regular_settings['NULL_VAL'] # Null value in the data
 # Model architecture and parameters
 MODEL_ARCH = Mask
 MODEL_PARAM = {
-    "patch_size":12,
-    "in_channel":1,
     "embed_dim":32,
     "num_heads":4,
     "mlp_ratio":4,
     "dropout":0.1,
     "mask_ratio":0.25,
     "encoder_depth":4,
-    "decoder_depth":1,
     "mode":"pre-train",
-    "dim_in": 32,
-    "dim_out": 32,
-    "agcn_embed_dim": 10,
-    "cheb_k": 2,
-    "num_node": 207,
-    "input_len": INPUT_LEN
+    "input_len": INPUT_LEN,
+    "mask_distribution": "geometric",
+    "lm": 3,
+    "positive_nums": 3,
+    "temperature": 0.1,
+    "compression_ratio": 0.1,
 }
 NUM_EPOCHS = 100
 

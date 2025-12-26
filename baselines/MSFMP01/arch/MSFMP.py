@@ -42,21 +42,11 @@ class MSFMP(nn.Module):
         """Load pre-trained model"""
 
         # load parameters
-        # 在模型训练过程中保存的模型状态
         checkpoint_dict = torch.load(self.pre_trained_tmae_path, map_location='cuda:0')
         self.tmae.load_state_dict(checkpoint_dict["model_state_dict"])
-
-        # 3. 删除smae加载代码
-        # checkpoint_dict = torch.load(self.pre_trained_smae_path, map_location='cpu')
-        # self.smae.load_state_dict(checkpoint_dict["model_state_dict"])
-
         # freeze parameters
         for param in self.tmae.parameters():
             param.requires_grad = False
-
-        # 4. 删除smae冻结参数
-        # for param in self.smae.parameters():
-        #     param.requires_grad = False
 
     def forward(self, history_data: torch.Tensor, future_data: torch.Tensor, batch_seen: int, epoch: int,
                 **kwargs) -> torch.Tensor:
@@ -71,14 +61,13 @@ class MSFMP(nn.Module):
         """
 
         # reshape
-        long_history_data = history_data  # [B, L, N, 1]???1
+        long_history_data = history_data
         short_term_history = history_data[:, -self.short_term_len:, :, :]
 
         batch_size, _, num_nodes, _ = history_data.shape
 
         # hidden_states_t(8,207,72,96)
         hidden_states_t = self.tmae(long_history_data)
-        # hidden_states = hidden_states_t.transpose(2, 3)
 
         # enhance
         out_len = 1
