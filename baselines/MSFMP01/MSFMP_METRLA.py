@@ -5,7 +5,7 @@ from easydict import EasyDict
 sys.path.append(os.path.abspath(__file__ + '/../../..'))
 
 import torch
-
+from .arch.mask.fredf_loss import masked_temporal_frequency_loss
 from basicts.metrics import masked_mae, masked_mape, masked_rmse
 from basicts.runners import SimpleTimeSeriesForecastingRunner
 from basicts.scaler import ZScoreScaler
@@ -31,7 +31,7 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v12.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v14.pt",
     "mask_args": {
                     "patch_size":12,
                     "in_channel":1,
@@ -106,7 +106,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v12'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_forcasting_v17_FreDF'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]
@@ -133,7 +133,7 @@ CFG.TRAIN.CKPT_SAVE_DIR = os.path.join(
     CFG.MODEL.NAME,
     '_'.join([DATA_NAME, str(CFG.TRAIN.NUM_EPOCHS), str(INPUT_LEN), str(OUTPUT_LEN)])
 )
-CFG.TRAIN.LOSS = masked_mae
+CFG.TRAIN.LOSS = masked_temporal_frequency_loss
 # Optimizer settings
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
@@ -159,10 +159,11 @@ CFG.TRAIN.CLIP_GRAD_PARAM = {
     "max_norm": 3.0
 }
 # curriculum learning
-CFG.TRAIN.CL = EasyDict()
-CFG.TRAIN.CL.WARM_EPOCHS = 0
-CFG.TRAIN.CL.CL_EPOCHS = 6
-CFG.TRAIN.CL.PREDICTION_LENGTH = 12
+# CFG.TRAIN.CL = EasyDict()
+# CFG.TRAIN.CL.WARM_EPOCHS = 0
+# CFG.TRAIN.CL.CL_EPOCHS = 6
+# CFG.TRAIN.CL.PREDICTION_LENGTH = 12
+CFG.TRAIN.CL = None
 CFG.TRAIN.EARLY_STOPPING_PATIENCE = 15
 
 ############################## Validation Configuration ##############################
