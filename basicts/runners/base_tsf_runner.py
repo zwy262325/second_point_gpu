@@ -368,7 +368,6 @@ class BaseTimeSeriesForecastingRunner(BaseEpochRunner):
             metric_item = self.metric_forward(metric_func, forward_return)
             self.update_epoch_meter(f'val/{metric_name}', metric_item.item())
 
-
     def compute_evaluation_metrics(self, returns_all: Dict):
         """Compute metrics for evaluating model performance during the test process.
 

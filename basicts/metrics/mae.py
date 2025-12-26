@@ -20,16 +20,6 @@ def masked_mae(prediction: torch.Tensor, target: torch.Tensor, null_val: float =
         torch.Tensor: A scalar tensor representing the masked mean absolute error.
 
     """
-
-    # 简单打印输入信息
-    print(f"[MAE] 输入 - pred: {prediction.shape}, target: {target.shape}")
-    print(f"       pred范围: [{prediction.min().item():.4f}, {prediction.max().item():.4f}]")
-    print(f"       target范围: [{target.min().item():.4f}, {target.max().item():.4f}]")
-
-    if target.numel() <= 100:  # 如果元素不多，打印具体值
-        print(f"       target值 (前20个): {target.flatten()[:20]}")
-        print(f"       pred值 (前20个): {prediction.flatten()[:20]}")
-
     if np.isnan(null_val):
         mask = ~torch.isnan(target)
     else:
@@ -43,7 +33,5 @@ def masked_mae(prediction: torch.Tensor, target: torch.Tensor, null_val: float =
     loss = torch.abs(prediction - target)
     loss = loss * mask  # Apply the mask to the loss
     loss = torch.nan_to_num(loss)  # Replace any NaNs in the loss with zero
-
-    print(f"[MAE] 结果: {torch.mean(loss):.6f}")
 
     return torch.mean(loss)
