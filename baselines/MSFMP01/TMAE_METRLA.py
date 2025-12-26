@@ -39,6 +39,16 @@ MODEL_PARAM = {
     "positive_nums": 3,
     "temperature": 0.1,
     "compression_ratio": 0.1,
+    "attention_configs": {
+        "factor":1,
+        "dropout":0.1,
+        "output_attention":False,
+        "d_model":32,
+        "n_heads":4,
+        "d_ff":128,
+        "activation":"gelu",
+        "e_layers":4,
+    }
 }
 NUM_EPOCHS = 100
 
