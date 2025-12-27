@@ -33,7 +33,7 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v14.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v16.pt",
     "mask_args": {
                     "embed_dim":32,
                     "num_heads":4,
@@ -48,6 +48,16 @@ MODEL_PARAM = {
                     "positive_nums": 3,
                     "temperature": 0.1,
                     "compression_ratio": 0.1,
+                    "attention_configs": {
+                         "factor":1,
+                         "dropout":0.1,
+                         "output_attention":False,
+                         "d_model":32,
+                         "n_heads":4,
+                         "d_ff":128,
+                         "activation":"gelu",
+                         "e_layers":4,
+                    }
     },
     "backend_args": {
     "num_nodes": 207,
@@ -105,7 +115,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v14'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v16'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]

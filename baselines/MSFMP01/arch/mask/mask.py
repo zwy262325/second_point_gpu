@@ -59,7 +59,7 @@ class Mask(nn.Module):
         # Embedding
         self.enc_embedding = DataEmbedding(1, 32, input_len)
         # encoder_new
-        self.encoder_new = TransformerLayers(embed_dim, encoder_depth, mlp_ratio, num_heads, dropout)
+        #self.encoder_new = TransformerLayers(embed_dim, encoder_depth, mlp_ratio, num_heads, dropout)
         # encoder_original
         # Encoder
         self.encoder = Encoder(
@@ -106,7 +106,8 @@ class Mask(nn.Module):
         batch_size, num_nodes, seq_len, _ = long_term_history.shape
         x_enc = long_term_history.reshape(batch_size * num_nodes, long_term_history.shape[2], long_term_history.shape[3])  # [(bs * n_vars) x seq_len x d_model]
         enc_out = self.enc_embedding(x_enc)
-        p_enc_out = self.encoder_new(enc_out)
+        # p_enc_out = self.encoder_new(enc_out)
+        p_enc_out, _ = self.encoder(enc_out)
         _, _, nums_dim = p_enc_out.shape
         p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)
 
