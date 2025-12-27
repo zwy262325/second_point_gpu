@@ -106,7 +106,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_forcasting_v17_FreDF'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_forcasting_v18_FreDF_0.8_mae'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]

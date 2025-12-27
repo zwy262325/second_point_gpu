@@ -6,8 +6,8 @@ def masked_temporal_frequency_loss(
         prediction: torch.Tensor,
         target: torch.Tensor,
         null_val: float = np.nan,
-        alpha: float = 0.5,  # 时域损失权重
-        beta: float = 0.5  # 频域损失权重
+        alpha: float = 0.2,  # 时域损失权重
+        beta: float = 0.8  # 频域损失权重
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     计算带掩码的时域平方损失和频域绝对值损失，同时忽略目标张量中的空值。
@@ -37,7 +37,7 @@ def masked_temporal_frequency_loss(
     mask = torch.nan_to_num(mask)  # 处理可能的NaN
 
     # 2. 计算时域平方损失（带掩码）
-    temporal_error = (prediction - target) ** 2
+    temporal_error = torch.abs(prediction - target)
     temporal_error = temporal_error * mask
     temporal_error = torch.nan_to_num(temporal_error)
     loss_tmp = torch.mean(temporal_error)
