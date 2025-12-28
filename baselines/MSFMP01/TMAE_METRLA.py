@@ -34,21 +34,11 @@ MODEL_PARAM = {
     "encoder_depth":4,
     "mode":"pre-train",
     "input_len": INPUT_LEN,
-    "mask_distribution": "geometric",
+    "mask_distribution": "Mix",
     "lm": 3,
     "positive_nums": 3,
     "temperature": 0.1,
-    "compression_ratio": 0.1,
-    "attention_configs": {
-        "factor":1,
-        "dropout":0.1,
-        "output_attention":False,
-        "d_model":32,
-        "n_heads":4,
-        "d_ff":128,
-        "activation":"gelu",
-        "e_layers":4,
-    }
+    "compression_ratio": 0.1
 }
 NUM_EPOCHS = 100
 
@@ -87,7 +77,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_v14_position1'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_TMAE_v20_mix_mask'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]

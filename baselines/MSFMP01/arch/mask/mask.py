@@ -42,7 +42,7 @@ class Flatten_Head(nn.Module):
 
 class Mask(nn.Module):
 
-    def __init__(self,  embed_dim, num_heads, mlp_ratio, dropout, mask_ratio, encoder_depth, input_len,mask_distribution, lm, positive_nums, temperature, compression_ratio, attention_configs, mode="pre-train"):
+    def __init__(self,  embed_dim, num_heads, mlp_ratio, dropout, mask_ratio, encoder_depth, input_len, mask_distribution, lm, positive_nums, temperature, compression_ratio, mode="pre-train"):
         super().__init__()
         assert mode in ["pre-train", "forecasting"], "Error mode."
         self.embed_dim = embed_dim
@@ -59,23 +59,7 @@ class Mask(nn.Module):
         # Embedding
         self.enc_embedding = DataEmbedding(1, 32, input_len)
         # encoder_new
-        #self.encoder_new = TransformerLayers(embed_dim, encoder_depth, mlp_ratio, num_heads, dropout)
-        # encoder_original
-        # Encoder
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(
-                        DSAttention(False, attention_configs.factor, attention_dropout=attention_configs.dropout,
-                                    output_attention=attention_configs.output_attention), attention_configs.d_model, attention_configs.n_heads),
-                    attention_configs.d_model,
-                    attention_configs.d_ff,
-                    dropout=attention_configs.dropout,
-                    activation=attention_configs.activation
-                ) for l in range(attention_configs.e_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(attention_configs.d_model),
-        )
+        self.encoder_new = TransformerLayers(embed_dim, encoder_depth, mlp_ratio, num_heads, dropout)
         # for series-wise representation
         self.pooler = Pooler_Head(input_len, embed_dim, compression_ratio,head_dropout=dropout)
         self.contrastive = ContrastiveWeight(temperature,positive_nums)
@@ -85,11 +69,10 @@ class Mask(nn.Module):
     def encoding_decoding(self, long_term_history):
 
         long_term_history = long_term_history.permute(0, 2, 1, 3)
-        x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, distribution='geometric')
+        x_enc, mask_index = self.masked_data(long_term_history, self.mask_ratio, self.lm, self.positive_nums, self.mask_distribution)
         batch_size, num_nodes,_, _ = long_term_history.shape
         enc_out = self.enc_embedding(x_enc)
-        #p_enc_out = self.encoder_new(enc_out)
-        p_enc_out, _= self.encoder(enc_out)
+        p_enc_out = self.encoder_new(enc_out)
         s_enc_out = self.pooler(p_enc_out)
         loss_cl, similarity_matrix, logits, positives_mask = self.contrastive(s_enc_out)
         rebuild_weight_matrix, agg_enc_out = self.aggregation(similarity_matrix, p_enc_out)
@@ -106,8 +89,7 @@ class Mask(nn.Module):
         batch_size, num_nodes, seq_len, _ = long_term_history.shape
         x_enc = long_term_history.reshape(batch_size * num_nodes, long_term_history.shape[2], long_term_history.shape[3])  # [(bs * n_vars) x seq_len x d_model]
         enc_out = self.enc_embedding(x_enc)
-        # p_enc_out = self.encoder_new(enc_out)
-        p_enc_out, _ = self.encoder(enc_out)
+        p_enc_out = self.encoder_new(enc_out)
         _, _, nums_dim = p_enc_out.shape
         p_enc_out = p_enc_out.reshape(batch_size, num_nodes, seq_len, nums_dim)
 

@@ -5,7 +5,7 @@ import math
 
 
 
-def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geometric'):
+def masked_data(sample, masking_ratio, lm, positive_nums,distribution):
     """Masked time series in time dimension"""
     # 原始代码输入数据sampleBTD(2,48,7) 现输入代码BNTD(8,207,72,96)
 
@@ -17,10 +17,10 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     # 对原始序列进行复制,生成 positive_nums 个副本,sample_repeat(6,7,48)
     sample_3d_repeat = sample_3d.repeat(positive_nums, 1, 1)
     # 为每个副本生成随机掩蔽（基于几何分布或随机掩蔽）mask(6,7,48)
-    mask_index = noise_mask(sample_3d_repeat, masking_ratio, lm, distribution=distribution,
+    mask_index = noise_mask(sample_3d_repeat, masking_ratio, lm, distribution,positive_nums,
                             device=sample_3d_repeat.device)
     # 应用掩蔽：将掩蔽位置的值置为 0
-    # mask_index = mask_index.to('cuda:0')
+    mask_index = mask_index.to('cuda:0')
     x_masked = mask_index * sample_3d_repeat
 
     # 2.新增：原始序列和掩蔽序列拼接  # batch_x_om_3d(6624,96,72) B * (positive_num + 1)DT, mask_om_3d(6624,96,72)
@@ -28,12 +28,6 @@ def masked_data(sample, masking_ratio, lm, positive_nums=1, distribution='geomet
     batch_x_om_3d = torch.cat([sample_3d, x_masked], dim=0)
     mask_om_3d = torch.cat([mask_o, mask_index], dim=0)
 
-    # # 3.新增：还原输出
-    # # 新的总批次大小: (P+1) * B_orig
-    # B_total_new = B_orig * (positive_nums + 1)
-    # batch_x_om = batch_x_om_3d.reshape(B_total_new, N_orig, T, D)
-    # mask_om = mask_om_3d.reshape(B_total_new, N_orig, T, D)
-    # # batch_x_om(32,207,72,96), mask_om(32,207,72,96)
     return batch_x_om_3d.permute(0, 2, 1), mask_om_3d.permute(0, 2, 1)
 
 
@@ -64,7 +58,7 @@ def geom_noise_mask_single(L, lm, masking_ratio):
     return keep_mask
 
 
-def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_feats=None, device=None):
+def noise_mask(X, masking_ratio, lm, distribution, positive_nums, exclude_feats=None, device=None):
     """
     Creates a random boolean mask of the same shape as X, with 0s at places where a feature should be masked.
     Args:
@@ -88,7 +82,6 @@ def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_fe
     # ... (其他 distribution 逻辑不变) ...
 
     if distribution == 'geometric':  # stateful (Markov chain)
-
         # 仅在 X 是 PyTorch Tensor 时，使用 GPU 加速版本
         if is_tensor and device.type != 'cpu':
             L = X.shape[0] * X.shape[1] * X.shape[2]  # 总元素数
@@ -100,6 +93,23 @@ def noise_mask(X, masking_ratio=0.25, lm=3, distribution='geometric', exclude_fe
             mask_1d = geom_noise_mask_single(X.shape[0] * X.shape[1] * X.shape[2], lm, masking_ratio)
             mask_1d = mask_1d.reshape(X.shape[0], X.shape[1], X.shape[2])
             mask = mask_1d
+    elif distribution == 'Mix':
+        B_total, C, T = X.shape
+        B_per = B_total // positive_nums
+        mask = torch.ones_like(X, dtype=torch.bool)  # 默认全1（保留）
+        # 第一个副本：随机掩蔽
+        mask_random = (torch.rand(B_per, C, T, device=device) < masking_ratio)
+        mask[:B_per] = mask_random
+        # 第二个副本：几何掩蔽（连续块，原有逻辑）
+        L_geo = B_per * (positive_nums -1) * C * T
+        if device.type != 'cpu' and is_tensor:
+            mask_geo_1d = torch_geom_noise_mask_single(L_geo, lm, masking_ratio, device=device)
+        else:
+            mask_geo_1d = geom_noise_mask_single(L_geo, lm, masking_ratio)
+            mask_geo_1d = torch.from_numpy(mask_geo_1d).to(device)
+        mask_geo = mask_geo_1d.reshape(B_per* (positive_nums -1), C, T).bool()
+        mask[B_per:] = mask_geo
+        return mask
     elif distribution == 'masked_tail':
         mask = np.ones(X.shape, dtype=bool)
         for m in range(X.shape[0]):  # feature dimension
