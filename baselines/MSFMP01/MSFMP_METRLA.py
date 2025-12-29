@@ -12,7 +12,7 @@ from basicts.scaler import ZScoreScaler
 from basicts.data import TimeSeriesForecastingDataset
 from basicts.utils import get_regular_settings, load_adj
 
-from .arch.mask.fre_mae import masked_fredf_loss
+from .arch.mask.fredf_loss import masked_temporal_frequency_loss
 
 from .arch import MSFMP
 
@@ -33,7 +33,7 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v16.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/v20.pt",
     "mask_args": {
                     "embed_dim":32,
                     "num_heads":4,
@@ -48,16 +48,6 @@ MODEL_PARAM = {
                     "positive_nums": 3,
                     "temperature": 0.1,
                     "compression_ratio": 0.1,
-                    "attention_configs": {
-                         "factor":1,
-                         "dropout":0.1,
-                         "output_attention":False,
-                         "d_model":32,
-                         "n_heads":4,
-                         "d_ff":128,
-                         "activation":"gelu",
-                         "e_layers":4,
-                    }
     },
     "backend_args": {
     "num_nodes": 207,
@@ -115,7 +105,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v16'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '__forcast_v20'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]
@@ -142,7 +132,7 @@ CFG.TRAIN.CKPT_SAVE_DIR = os.path.join(
     CFG.MODEL.NAME,
     '_'.join([DATA_NAME, str(CFG.TRAIN.NUM_EPOCHS), str(INPUT_LEN), str(OUTPUT_LEN)])
 )
-CFG.TRAIN.LOSS = masked_mae
+CFG.TRAIN.LOSS = masked_temporal_frequency_loss
 # Optimizer settings
 CFG.TRAIN.OPTIM = EasyDict()
 CFG.TRAIN.OPTIM.TYPE = "Adam"
@@ -168,10 +158,11 @@ CFG.TRAIN.CLIP_GRAD_PARAM = {
     "max_norm": 3.0
 }
 # curriculum learning
-CFG.TRAIN.CL = EasyDict()
-CFG.TRAIN.CL.WARM_EPOCHS = 0
-CFG.TRAIN.CL.CL_EPOCHS = 6
-CFG.TRAIN.CL.PREDICTION_LENGTH = 12
+# CFG.TRAIN.CL = EasyDict()
+# CFG.TRAIN.CL.WARM_EPOCHS = 0
+# CFG.TRAIN.CL.CL_EPOCHS = 6
+# CFG.TRAIN.CL.PREDICTION_LENGTH = 12
+CFG.TRAIN.CL = None
 CFG.TRAIN.EARLY_STOPPING_PATIENCE = 15
 
 ############################## Validation Configuration ##############################
