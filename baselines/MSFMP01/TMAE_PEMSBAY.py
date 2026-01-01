@@ -36,7 +36,7 @@ MODEL_PARAM = {
     "input_len": INPUT_LEN,
     "mask_distribution": "Mix",
     "lm": 3,
-    "positive_nums": 3,
+    "positive_nums": 2,
     "temperature": 0.1,
     "compression_ratio": 0.1
 }
