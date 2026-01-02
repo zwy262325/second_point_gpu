@@ -134,7 +134,7 @@ class TokenEmbedding(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embed_dim, max_node_num=208, max_time_step=288, device=None):
+    def __init__(self, embed_dim, max_node_num=326, max_time_step=288, device=None):
         super(PositionalEncoding, self).__init__()
         # 指定设备，优先使用传入的device，否则用默认设备
         self.device = device if device is not None else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -172,7 +172,7 @@ class DataEmbedding(nn.Module):
         self.minute_size = 288
         self.weekday_size = 7
         self.feature_dim = 1
-        self.node = 207 # METR-LA的节点
+        self.node = 325 # METR-LA的节点
         self.position_encoding = PositionalEncoding(d_model)  # 创建位置嵌入层
         if self.add_time_in_day:
             self.daytime_embedding = nn.init.xavier_uniform_(nn.Parameter(torch.empty(self.minute_size, d_model)))  # 一天中不同分钟索引（0-1440）映射到embed_dim维的向量中
