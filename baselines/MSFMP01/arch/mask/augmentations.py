@@ -93,22 +93,41 @@ def noise_mask(X, masking_ratio, lm, distribution, positive_nums, exclude_feats=
             mask_1d = geom_noise_mask_single(X.shape[0] * X.shape[1] * X.shape[2], lm, masking_ratio)
             mask_1d = mask_1d.reshape(X.shape[0], X.shape[1], X.shape[2])
             mask = mask_1d
-    elif distribution == 'Mix':
+    # elif distribution == 'Mix':
+    #     B_total, C, T = X.shape
+    #     B_per = B_total // positive_nums
+    #     mask = torch.ones_like(X, dtype=torch.bool)  # 默认全1（保留）
+    #     # 第一个副本：随机掩蔽
+    #     mask_random = (torch.rand(B_per, C, T, device=device) < masking_ratio)
+    #     mask[:B_per] = mask_random
+    #     # 第二个副本：几何掩蔽（连续块，原有逻辑）
+    #     L_geo = B_per * (positive_nums -1) * C * T
+    #     if device.type != 'cpu' and is_tensor:
+    #         mask_geo_1d = torch_geom_noise_mask_single(L_geo, lm, masking_ratio, device=device)
+    #     else:
+    #         mask_geo_1d = geom_noise_mask_single(L_geo, lm, masking_ratio)
+    #         mask_geo_1d = torch.from_numpy(mask_geo_1d).to(device)
+    #     mask_geo = mask_geo_1d.reshape(B_per* (positive_nums -1), C, T).bool()
+    #     mask[B_per:] = mask_geo
+    # elif distribution == 'Mix': # 全部为随机掩蔽
+    #     B_total, C, T = X.shape
+    #     B_per = B_total // positive_nums
+    #     mask = torch.ones_like(X, dtype=torch.bool)  # 默认全1（保留）
+    #     mask_random = (torch.rand(B_per, C, T, device=device) < masking_ratio)
+    #     mask[:B_per] = mask_random
+    #     B_remaining = B_total - B_per
+    #     mask_random_remaining = (torch.rand(B_remaining, C, T, device=device) < masking_ratio)
+    #     mask[B_per:] = mask_random_remaining
+    elif distribution == 'Mix':   # 全部为几何掩蔽
         B_total, C, T = X.shape
-        B_per = B_total // positive_nums
-        mask = torch.ones_like(X, dtype=torch.bool)  # 默认全1（保留）
-        # 第一个副本：随机掩蔽
-        mask_random = (torch.rand(B_per, C, T, device=device) < masking_ratio)
-        mask[:B_per] = mask_random
-        # 第二个副本：几何掩蔽（连续块，原有逻辑）
-        L_geo = B_per * (positive_nums -1) * C * T
+        L_geo_total = B_total * C * T
         if device.type != 'cpu' and is_tensor:
-            mask_geo_1d = torch_geom_noise_mask_single(L_geo, lm, masking_ratio, device=device)
+            mask_geo_1d_total = torch_geom_noise_mask_single(L_geo_total, lm, masking_ratio, device=device)
         else:
-            mask_geo_1d = geom_noise_mask_single(L_geo, lm, masking_ratio)
-            mask_geo_1d = torch.from_numpy(mask_geo_1d).to(device)
-        mask_geo = mask_geo_1d.reshape(B_per* (positive_nums -1), C, T).bool()
-        mask[B_per:] = mask_geo
+            mask_geo_1d_total = geom_noise_mask_single(L_geo_total, lm, masking_ratio)
+            mask_geo_1d_total = torch.from_numpy(mask_geo_1d_total).to(device)
+        mask_geo_total = mask_geo_1d_total.reshape(B_total, C, T).bool()
+        mask = mask_geo_total
         return mask
     elif distribution == 'masked_tail':
         mask = np.ones(X.shape, dtype=bool)
