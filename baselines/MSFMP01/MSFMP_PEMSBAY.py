@@ -33,7 +33,7 @@ MODEL_ARCH = MSFMP
 adj_mx, _ = load_adj("datasets/" + DATA_NAME + "/adj_mx.pkl", "doubletransition")
 MODEL_PARAM = {
     "dataset_name": DATA_NAME,
-    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/pemsby_tmae.pt",
+    "pre_trained_tmae_path": "baselines/MSFMP01/mask_save/pemsby_mix.pt",
     "mask_args": {
                     "embed_dim":32,
                     "num_heads":4,
@@ -43,9 +43,9 @@ MODEL_PARAM = {
                     "encoder_depth":4,
                     "mode":"forecasting",
                     "input_len": INPUT_LEN,
-                    "mask_distribution": "geometric",
+                    "mask_distribution": "Mix",
                     "lm": 3,
-                    "positive_nums": 3,
+                    "positive_nums": 2,
                     "temperature": 0.1,
                     "compression_ratio": 0.1,
     },
@@ -105,7 +105,7 @@ CFG.SCALER.PARAM = EasyDict({
 ############################## Model Configuration ##############################
 CFG.MODEL = EasyDict()
 # Model settings
-CFG.MODEL.NAME = MODEL_ARCH.__name__ + 'pemsbay_forcast_0.95'
+CFG.MODEL.NAME = MODEL_ARCH.__name__ + '_pemsbay_forcast_fred_0.2'
 CFG.MODEL.ARCH = MODEL_ARCH
 CFG.MODEL.PARAM = MODEL_PARAM
 CFG.MODEL.FORWARD_FEATURES = [0, 1, 2]
